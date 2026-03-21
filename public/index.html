@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>로또 번호 추천기</title>
+<title>복권 번호 추천기</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -13,6 +13,7 @@
   --border:#2a3050;--text:#e8eaf0;--text2:#8892b0;--text3:#505a78;
   --accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.25);
   --gold:#ffd32a;--gold-dim:#b8960a;
+  --pension-accent:#e17055;--pension-accent2:#fab1a0;--pension-glow:rgba(225,112,85,.25);
   --ball-1:#ffc312;--ball-2:#4a90d9;--ball-3:#e74c3c;--ball-4:#7f8c8d;--ball-5:#2ecc71;
   --radius:14px;--radius-sm:8px;
 }
@@ -22,7 +23,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 
 .container{max-width:640px;margin:0 auto;padding:1.5rem 1rem 4rem;position:relative;z-index:1}
 
-.header{text-align:center;margin-bottom:2rem;padding-top:1rem}
+.header{text-align:center;margin-bottom:1.8rem;padding-top:1rem}
 .header h1{font-family:'Outfit',sans-serif;font-size:2rem;font-weight:800;background:linear-gradient(135deg,var(--accent2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em;line-height:1.2}
 .header .sub{color:var(--text2);font-size:.82rem;margin-top:.4rem;font-weight:300}
 .status-bar{display:flex;justify-content:center;gap:.6rem;margin-top:1rem;flex-wrap:wrap}
@@ -31,13 +32,29 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 .status-chip.loading .dot{animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-.tabs{display:flex;gap:.4rem;margin-bottom:1.5rem;background:var(--surface);border-radius:var(--radius);padding:.3rem;border:1px solid var(--border)}
-.tab{flex:1;padding:.55rem;text-align:center;border-radius:var(--radius-sm);font-size:.8rem;font-weight:500;cursor:pointer;transition:all .2s;color:var(--text2);border:none;background:none}
-.tab.active{background:var(--accent);color:#fff;box-shadow:0 2px 12px var(--accent-glow)}
-.tab:hover:not(.active){color:var(--text);background:var(--surface2)}
+/* Main Tabs */
+.main-tabs{display:flex;gap:0;margin-bottom:1.5rem;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.main-tab{flex:1;padding:.75rem .5rem;text-align:center;cursor:pointer;transition:all .25s;border:none;background:var(--surface);position:relative}
+.main-tab .tab-icon{font-size:1.4rem;margin-bottom:.25rem}
+.main-tab .tab-name{font-size:.85rem;font-weight:600;display:block}
+.main-tab .tab-desc{font-size:.65rem;color:var(--text3);display:block;margin-top:.15rem;font-weight:300}
+.main-tab.active-lotto{background:linear-gradient(135deg,rgba(108,92,231,.15),rgba(108,92,231,.05));color:var(--accent2)}
+.main-tab.active-lotto .tab-name{color:var(--accent2)}
+.main-tab.active-lotto::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:2px;background:var(--accent);border-radius:2px}
+.main-tab.active-pension{background:linear-gradient(135deg,rgba(225,112,85,.15),rgba(225,112,85,.05));color:var(--pension-accent2)}
+.main-tab.active-pension .tab-name{color:var(--pension-accent2)}
+.main-tab.active-pension::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:2px;background:var(--pension-accent);border-radius:2px}
+.main-tab:not([class*="active-"]){color:var(--text3)}
+.main-tab:not([class*="active-"]):hover{background:var(--surface2);color:var(--text2)}
+
+/* Sub tabs */
+.sub-tabs{display:flex;gap:.3rem;margin-bottom:1rem;background:var(--surface);border-radius:var(--radius-sm);padding:.25rem;border:1px solid var(--border)}
+.sub-tab{flex:1;padding:.4rem;text-align:center;border-radius:6px;font-size:.75rem;font-weight:500;cursor:pointer;transition:all .2s;color:var(--text3);border:none;background:none}
+.sub-tab.active{background:var(--surface2);color:var(--text)}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;margin-bottom:1rem;transition:border-color .2s}
 .card:hover{border-color:var(--accent)}
+.card.pension-card:hover{border-color:var(--pension-accent)}
 .card-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.7rem;font-weight:500}
 .card-title{font-size:.95rem;font-weight:600;margin-bottom:.3rem}
 .card-desc{font-size:.78rem;color:var(--text2);line-height:1.5}
@@ -57,6 +74,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 .gen-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(108,92,231,.4)}
 .gen-btn:active{transform:translateY(0)}
 .gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.gen-btn.pension-btn{background:linear-gradient(135deg,var(--pension-accent),#e84393);box-shadow:0 4px 20px var(--pension-glow)}
+.gen-btn.pension-btn:hover{box-shadow:0 6px 28px rgba(225,112,85,.4)}
 
 .result-set{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.8rem 1rem;margin-top:.6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
 .result-set .set-label{font-size:.7rem;color:var(--text3);font-weight:500;width:100%;margin-bottom:.2rem}
@@ -85,6 +104,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 .stepper button{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .stepper button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
 .stepper span{font-family:'Outfit';font-size:.9rem;font-weight:600;min-width:1.5rem;text-align:center}
+.pension-stepper button:hover{background:var(--pension-accent);border-color:var(--pension-accent);color:#fff}
 
 .toggle{position:relative;width:40px;height:22px;cursor:pointer}
 .toggle input{display:none}
@@ -95,6 +115,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 
 .skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius-sm);height:40px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 .hidden{display:none !important}
 
@@ -111,83 +132,115 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 <body>
 <div class="container">
   <div class="header">
-    <h1>LOTTO LAB</h1>
+    <h1>LUCKY LAB</h1>
     <div class="sub">데이터 기반 번호 추천</div>
     <div class="status-bar">
       <div class="status-chip" id="statusChip"><span class="dot"></span><span id="statusText">준비중...</span></div>
     </div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" data-tab="generate" onclick="switchTab('generate')">번호 생성</div>
-    <div class="tab" data-tab="stats" onclick="switchTab('stats')">통계 분석</div>
-    <div class="tab" data-tab="pension" onclick="switchTab('pension')">연금복권</div>
+  <!-- 메인 탭: 두 복권 동등 레벨 -->
+  <div class="main-tabs">
+    <div class="main-tab active-lotto" id="mainTabLotto" onclick="switchMain('lotto')">
+      <div class="tab-icon">🎱</div>
+      <span class="tab-name">로또 6/45</span>
+      <span class="tab-desc">1등 약 20억</span>
+    </div>
+    <div class="main-tab" id="mainTabPension" onclick="switchMain('pension')">
+      <div class="tab-icon">🏦</div>
+      <span class="tab-name">연금복권 720+</span>
+      <span class="tab-desc">월 700만 × 20년</span>
+    </div>
   </div>
 
-  <div id="tab-generate">
-    <div class="card">
-      <div class="card-label">최근 당첨번호</div>
-      <div id="lastDraw"><div class="skeleton" style="width:100%"></div></div>
+  <!-- 로또 6/45 섹션 -->
+  <div id="section-lotto">
+    <div class="sub-tabs">
+      <div class="sub-tab active" data-sub="lotto-gen" onclick="switchSub('lotto-gen')">번호 생성</div>
+      <div class="sub-tab" data-sub="lotto-stats" onclick="switchSub('lotto-stats')">통계 분석</div>
     </div>
-    <div class="card">
+
+    <div id="sub-lotto-gen">
+      <div class="card">
+        <div class="card-label">최근 당첨번호</div>
+        <div id="lastDraw"><div class="skeleton" style="width:100%"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-label">생성 옵션</div>
+        <div class="option-row">
+          <span class="option-label">생성 세트 수</span>
+          <div class="stepper">
+            <button onclick="adjustSets('lotto',-1)">−</button>
+            <span id="lottoSetCount">5</span>
+            <button onclick="adjustSets('lotto',1)">+</button>
+          </div>
+        </div>
+        <div class="option-row">
+          <span class="option-label">핫넘버 포함</span>
+          <label class="toggle"><input type="checkbox" id="optHot" checked><span class="slider"></span></label>
+        </div>
+        <div class="option-row">
+          <span class="option-label">콜드넘버 포함</span>
+          <label class="toggle"><input type="checkbox" id="optCold" checked><span class="slider"></span></label>
+        </div>
+        <div class="option-row">
+          <span class="option-label">연속번호 허용</span>
+          <label class="toggle"><input type="checkbox" id="optConsec"><span class="slider"></span></label>
+        </div>
+      </div>
+      <button class="gen-btn" id="genBtn" onclick="generateLotto()" disabled>번호 생성하기</button>
+      <div id="lottoResults"></div>
+    </div>
+
+    <div id="sub-lotto-stats" class="hidden">
+      <div class="card">
+        <div class="card-label">전체 통계</div>
+        <div class="stat-grid" id="statGrid">
+          <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
+          <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
+          <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">가장 많이 나온 번호 TOP 10</div>
+        <div id="hotChart"><div class="skeleton" style="height:200px"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-label">가장 적게 나온 번호 TOP 10</div>
+        <div id="coldChart"><div class="skeleton" style="height:200px"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 연금복권 720+ 섹션 -->
+  <div id="section-pension" class="hidden">
+    <div class="card pension-card">
+      <div class="card-label">연금복권 720+</div>
+      <div class="card-title">조 번호(1자리) + 당첨번호(6자리)</div>
+      <div class="card-desc">1등: 월 700만원 × 20년 = 총 16.8억원<br>2등: 월 100만원 × 10년 = 총 1.2억원</div>
+    </div>
+
+    <div class="card pension-card">
       <div class="card-label">생성 옵션</div>
       <div class="option-row">
         <span class="option-label">생성 세트 수</span>
-        <div class="stepper">
-          <button onclick="adjustSets(-1)">−</button>
-          <span id="setCount">5</span>
-          <button onclick="adjustSets(1)">+</button>
+        <div class="stepper pension-stepper">
+          <button onclick="adjustSets('pension',-1)">−</button>
+          <span id="pensionSetCount">5</span>
+          <button onclick="adjustSets('pension',1)">+</button>
         </div>
       </div>
-      <div class="option-row">
-        <span class="option-label">핫넘버 포함</span>
-        <label class="toggle"><input type="checkbox" id="optHot" checked><span class="slider"></span></label>
-      </div>
-      <div class="option-row">
-        <span class="option-label">콜드넘버 포함</span>
-        <label class="toggle"><input type="checkbox" id="optCold" checked><span class="slider"></span></label>
-      </div>
-      <div class="option-row">
-        <span class="option-label">연속번호 허용</span>
-        <label class="toggle"><input type="checkbox" id="optConsec"><span class="slider"></span></label>
-      </div>
     </div>
-    <button class="gen-btn" id="genBtn" onclick="generateNumbers()" disabled>번호 생성하기</button>
-    <div id="results"></div>
-  </div>
 
-  <div id="tab-stats" class="hidden">
-    <div class="card">
-      <div class="card-label">전체 통계</div>
-      <div class="stat-grid" id="statGrid">
-        <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
-        <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
-        <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-label">가장 많이 나온 번호 TOP 10</div>
-      <div id="hotChart"><div class="skeleton" style="height:200px"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-label">가장 적게 나온 번호 TOP 10</div>
-      <div id="coldChart"><div class="skeleton" style="height:200px"></div></div>
-    </div>
-  </div>
-
-  <div id="tab-pension" class="hidden">
-    <div class="card">
-      <div class="card-title">연금복권 720+</div>
-      <div class="card-desc">1등: 월 700만원 × 20년 (총 16.8억)</div>
-      <button class="gen-btn" onclick="generatePension()" style="margin-top:1rem">연금복권 번호 생성</button>
-      <div id="pensionResults"></div>
-    </div>
+    <button class="gen-btn pension-btn" onclick="generatePension()">연금복권 번호 생성</button>
+    <div id="pensionResults"></div>
   </div>
 </div>
 
 <script>
 const API_BASE = '/api/lotto';
-let allData = [], freqMap = {}, latestRound = 0, setCount = 5;
+let allData = [], freqMap = {}, latestRound = 0;
+let lottoSetCount = 5, pensionSetCount = 5;
 
 async function init() {
   setStatus('데이터 불러오는 중...', true);
@@ -196,15 +249,10 @@ async function init() {
     const json = await res.json();
     allData = json.results || [];
     latestRound = json.latestRound || 0;
-    buildFreqMap();
-    renderLastDraw();
-    renderStats();
+    buildFreqMap(); renderLastDraw(); renderStats();
     setStatus(`${latestRound}회차 기준 · ${allData.length}회 분석`, false);
     document.getElementById('genBtn').disabled = false;
-  } catch (e) {
-    setStatus('데이터 로딩 실패', false);
-    console.error(e);
-  }
+  } catch (e) { setStatus('데이터 로딩 실패', false); console.error(e); }
 }
 
 function setStatus(msg, loading) {
@@ -215,109 +263,82 @@ function setStatus(msg, loading) {
 function buildFreqMap() {
   freqMap = {};
   for (let i = 1; i <= 45; i++) freqMap[i] = 0;
-  allData.forEach(d => {
-    for (let i = 1; i <= 6; i++) freqMap[d[`drwtNo${i}`]]++;
-    freqMap[d.bnusNo]++;
-  });
+  allData.forEach(d => { for (let i = 1; i <= 6; i++) freqMap[d[`drwtNo${i}`]]++; freqMap[d.bnusNo]++; });
 }
 
-function ballClass(n) {
-  if (n <= 10) return 'r1'; if (n <= 20) return 'r2';
-  if (n <= 30) return 'r3'; if (n <= 40) return 'r4'; return 'r5';
+function switchMain(section) {
+  document.getElementById('mainTabLotto').className = 'main-tab' + (section === 'lotto' ? ' active-lotto' : '');
+  document.getElementById('mainTabPension').className = 'main-tab' + (section === 'pension' ? ' active-pension' : '');
+  document.getElementById('section-lotto').classList.toggle('hidden', section !== 'lotto');
+  document.getElementById('section-pension').classList.toggle('hidden', section !== 'pension');
 }
-function makeBall(n, sm = false) {
-  return `<div class="ball ${ballClass(n)} ${sm ? 'ball-sm' : ''}">${n}</div>`;
+
+function switchSub(sub) {
+  document.querySelectorAll('.sub-tab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
+  document.getElementById('sub-lotto-gen').classList.toggle('hidden', sub !== 'lotto-gen');
+  document.getElementById('sub-lotto-stats').classList.toggle('hidden', sub !== 'lotto-stats');
 }
+
+function adjustSets(type, delta) {
+  if (type === 'lotto') { lottoSetCount = Math.max(1, Math.min(10, lottoSetCount + delta)); document.getElementById('lottoSetCount').textContent = lottoSetCount; }
+  else { pensionSetCount = Math.max(1, Math.min(10, pensionSetCount + delta)); document.getElementById('pensionSetCount').textContent = pensionSetCount; }
+}
+
+function ballClass(n) { if (n <= 10) return 'r1'; if (n <= 20) return 'r2'; if (n <= 30) return 'r3'; if (n <= 40) return 'r4'; return 'r5'; }
+function makeBall(n, sm = false) { return `<div class="ball ${ballClass(n)} ${sm ? 'ball-sm' : ''}">${n}</div>`; }
 
 function renderLastDraw() {
   if (!allData.length) return;
   const d = allData[0];
-  const nums = [1,2,3,4,5,6].map(i => makeBall(d[`drwtNo${i}`]));
   document.getElementById('lastDraw').innerHTML = `
     <div class="card-title">${d.drwNo}회 (${d.drwNoDate})</div>
     <div class="last-draw">
-      <div class="balls">${nums.join('')}</div>
-      <span class="bonus-sep">+</span>
-      ${makeBall(d.bnusNo)}
+      <div class="balls">${[1,2,3,4,5,6].map(i => makeBall(d[`drwtNo${i}`])).join('')}</div>
+      <span class="bonus-sep">+</span>${makeBall(d.bnusNo)}
     </div>`;
 }
 
 function renderStats() {
   const sorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
   const maxFreq = sorted[0][1];
-  const avg = (allData.reduce((s, d) => {
-    let sum = 0; for (let i = 1; i <= 6; i++) sum += d[`drwtNo${i}`]; return s + sum / 6;
-  }, 0) / allData.length).toFixed(1);
-  const oddEvenRatios = allData.map(d => {
-    let odd = 0; for (let i = 1; i <= 6; i++) if (d[`drwtNo${i}`] % 2 === 1) odd++; return odd;
-  });
-  const avgOdd = (oddEvenRatios.reduce((a, b) => a + b, 0) / oddEvenRatios.length).toFixed(1);
+  const avg = (allData.reduce((s, d) => { let sum = 0; for (let i = 1; i <= 6; i++) sum += d[`drwtNo${i}`]; return s + sum / 6; }, 0) / allData.length).toFixed(1);
+  const avgOdd = (allData.map(d => { let odd = 0; for (let i = 1; i <= 6; i++) if (d[`drwtNo${i}`] % 2 === 1) odd++; return odd; }).reduce((a, b) => a + b, 0) / allData.length).toFixed(1);
 
   document.getElementById('statGrid').innerHTML = `
     <div class="stat-box"><div class="val">${allData.length}</div><div class="lbl">분석 회차</div></div>
     <div class="stat-box"><div class="val">${avg}</div><div class="lbl">평균 번호</div></div>
     <div class="stat-box"><div class="val">${avgOdd}:${(6 - parseFloat(avgOdd)).toFixed(1)}</div><div class="lbl">홀:짝 비율</div></div>`;
 
-  const hot10 = sorted.slice(0, 10);
-  document.getElementById('hotChart').innerHTML = `<div class="freq-chart">${hot10.map(([n, c]) => `
-    <div class="freq-row">
-      <div class="freq-num ${ballClass(Number(n))}" style="color:#fff;font-size:.65rem">${n}</div>
-      <div class="freq-bar-bg"><div class="freq-bar" style="width:${(c/maxFreq*100).toFixed(1)}%;background:var(--accent2)"></div></div>
-      <div class="freq-cnt">${c}</div>
-    </div>`).join('')}</div>`;
+  document.getElementById('hotChart').innerHTML = `<div class="freq-chart">${sorted.slice(0, 10).map(([n, c]) => `
+    <div class="freq-row"><div class="freq-num ${ballClass(Number(n))}" style="color:#fff;font-size:.65rem">${n}</div>
+    <div class="freq-bar-bg"><div class="freq-bar" style="width:${(c/maxFreq*100).toFixed(1)}%;background:var(--accent2)"></div></div>
+    <div class="freq-cnt">${c}</div></div>`).join('')}</div>`;
 
-  const cold10 = sorted.slice(-10).reverse();
-  document.getElementById('coldChart').innerHTML = `<div class="freq-chart">${cold10.map(([n, c]) => `
-    <div class="freq-row">
-      <div class="freq-num ${ballClass(Number(n))}" style="color:#fff;font-size:.65rem">${n}</div>
-      <div class="freq-bar-bg"><div class="freq-bar" style="width:${(c/maxFreq*100).toFixed(1)}%;background:var(--ball-3)"></div></div>
-      <div class="freq-cnt">${c}</div>
-    </div>`).join('')}</div>`;
+  document.getElementById('coldChart').innerHTML = `<div class="freq-chart">${sorted.slice(-10).reverse().map(([n, c]) => `
+    <div class="freq-row"><div class="freq-num ${ballClass(Number(n))}" style="color:#fff;font-size:.65rem">${n}</div>
+    <div class="freq-bar-bg"><div class="freq-bar" style="width:${(c/maxFreq*100).toFixed(1)}%;background:var(--ball-3)"></div></div>
+    <div class="freq-cnt">${c}</div></div>`).join('')}</div>`;
 }
 
-function generateNumbers() {
-  const useHot = document.getElementById('optHot').checked;
-  const useCold = document.getElementById('optCold').checked;
-  const allowConsec = document.getElementById('optConsec').checked;
+function generateLotto() {
+  const useHot = document.getElementById('optHot').checked, useCold = document.getElementById('optCold').checked, allowConsec = document.getElementById('optConsec').checked;
   const sorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
-  const hotNums = sorted.slice(0, 15).map(e => Number(e[0]));
-  const coldNums = sorted.slice(-15).map(e => Number(e[0]));
+  const hotNums = sorted.slice(0, 15).map(e => Number(e[0])), coldNums = sorted.slice(-15).map(e => Number(e[0]));
   const results = [];
-  for (let s = 0; s < setCount; s++) {
+  for (let s = 0; s < lottoSetCount; s++) {
     let nums = new Set(), attempts = 0;
     while (nums.size < 6 && attempts < 500) {
-      attempts++;
-      let n; const r = Math.random();
-      if (useHot && useCold) {
-        if (r < 0.4) n = hotNums[Math.floor(Math.random() * hotNums.length)];
-        else if (r < 0.6) n = coldNums[Math.floor(Math.random() * coldNums.length)];
-        else n = Math.floor(Math.random() * 45) + 1;
-      } else if (useHot) {
-        n = r < 0.5 ? hotNums[Math.floor(Math.random() * hotNums.length)] : Math.floor(Math.random() * 45) + 1;
-      } else if (useCold) {
-        n = r < 0.5 ? coldNums[Math.floor(Math.random() * coldNums.length)] : Math.floor(Math.random() * 45) + 1;
-      } else {
-        n = Math.floor(Math.random() * 45) + 1;
-      }
-      if (!allowConsec && nums.size > 0) {
-        const arr = [...nums];
-        if (arr.some(x => Math.abs(x - n) === 1)) continue;
-      }
+      attempts++; let n; const r = Math.random();
+      if (useHot && useCold) { if (r < 0.4) n = hotNums[Math.floor(Math.random() * hotNums.length)]; else if (r < 0.6) n = coldNums[Math.floor(Math.random() * coldNums.length)]; else n = Math.floor(Math.random() * 45) + 1; }
+      else if (useHot) { n = r < 0.5 ? hotNums[Math.floor(Math.random() * hotNums.length)] : Math.floor(Math.random() * 45) + 1; }
+      else if (useCold) { n = r < 0.5 ? coldNums[Math.floor(Math.random() * coldNums.length)] : Math.floor(Math.random() * 45) + 1; }
+      else { n = Math.floor(Math.random() * 45) + 1; }
+      if (!allowConsec && nums.size > 0) { if ([...nums].some(x => Math.abs(x - n) === 1)) continue; }
       nums.add(n);
     }
     results.push([...nums].sort((a, b) => a - b));
   }
-  renderResults(results);
-}
-
-function renderResults(sets) {
-  if (!document.getElementById('fadeInStyle')) {
-    const style = document.createElement('style');
-    style.id = 'fadeInStyle';
-    style.textContent = '@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}';
-    document.head.appendChild(style);
-  }
-  document.getElementById('results').innerHTML = sets.map((nums, i) => `
+  document.getElementById('lottoResults').innerHTML = results.map((nums, i) => `
     <div class="result-set" style="animation:fadeIn .3s ${i * .08}s both">
       <div class="set-label">세트 ${String.fromCharCode(65 + i)}</div>
       <div class="balls">${nums.map(n => makeBall(n, true)).join('')}</div>
@@ -325,12 +346,10 @@ function renderResults(sets) {
 }
 
 function generatePension() {
-  const groups = ['1','2','3','4','5'];
-  const sets = [];
-  for (let i = 0; i < 5; i++) {
+  const groups = ['1','2','3','4','5'], sets = [];
+  for (let i = 0; i < pensionSetCount; i++) {
     const group = groups[Math.floor(Math.random() * groups.length)];
-    let nums = '';
-    for (let j = 0; j < 6; j++) nums += Math.floor(Math.random() * 10);
+    let nums = ''; for (let j = 0; j < 6; j++) nums += Math.floor(Math.random() * 10);
     sets.push({ group, nums });
   }
   document.getElementById('pensionResults').innerHTML = sets.map((s, i) => `
@@ -338,18 +357,6 @@ function generatePension() {
       <div class="set-label">세트 ${i + 1}</div>
       <div class="pension-group">${s.group}조 ${s.nums.split('').join(' ')}</div>
     </div>`).join('');
-}
-
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  ['generate', 'stats', 'pension'].forEach(t => {
-    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
-  });
-}
-
-function adjustSets(delta) {
-  setCount = Math.max(1, Math.min(10, setCount + delta));
-  document.getElementById('setCount').textContent = setCount;
 }
 
 init();
