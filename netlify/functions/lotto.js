@@ -1,71 +1,35 @@
-// Netlify Serverless Function: 동행복권 API 프록시
-const http = require('http');
+// Netlify Serverless Function: 로또 데이터 API
 const https = require('https');
+const http = require('http');
 
-// 세션 쿠키를 받아온 후 API 호출
-function getSessionCookie() {
+// 동행복권 API에서 데이터 가져오기 시도 (한국 IP에서만 동작)
+function fetchFromDhlottery(round) {
   return new Promise((resolve) => {
     const req = https.request({
       hostname: 'www.dhlottery.co.kr',
-      path: '/',
+      path: `/common.do?method=getLottoNumber&drwNo=${round}`,
       method: 'GET',
       timeout: 5000,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, */*',
+        'Referer': 'https://www.dhlottery.co.kr/gameResult.do?method=byWin',
+        'X-Requested-With': 'XMLHttpRequest',
       },
     }, (res) => {
-      const cookies = (res.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
-      res.resume(); // drain
-      res.on('end', () => resolve(cookies));
-    });
-    req.on('error', () => resolve(''));
-    req.on('timeout', () => { req.destroy(); resolve(''); });
-    req.end();
-  });
-}
-
-function fetchLotto(round, cookie) {
-  return new Promise((resolve) => {
-    // HTTPS 시도
-    function tryFetch(protocol, hostname, port) {
-      const mod = protocol === 'https' ? https : http;
-      const req = mod.request({
-        hostname,
-        port,
-        path: `/common.do?method=getLottoNumber&drwNo=${round}`,
-        method: 'GET',
-        timeout: 5000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json, text/javascript, */*; q=0.01',
-          'Accept-Language': 'ko-KR,ko;q=0.9',
-          'Referer': 'https://www.dhlottery.co.kr/gameResult.do?method=byWin',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Cookie': cookie || '',
-        },
-      }, (res) => {
-        // 리다이렉트면 실패 처리
-        if (res.statusCode >= 300 && res.statusCode < 400) {
-          res.resume();
-          res.on('end', () => resolve(null));
-          return;
-        }
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            if (json.returnValue === 'success') resolve(json);
-            else resolve(null);
-          } catch { resolve(null); }
-        });
+      if (res.statusCode >= 300) { res.resume(); res.on('end', () => resolve(null)); return; }
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          resolve(json.returnValue === 'success' ? json : null);
+        } catch { resolve(null); }
       });
-      req.on('error', () => resolve(null));
-      req.on('timeout', () => { req.destroy(); resolve(null); });
-      req.end();
-    }
-
-    tryFetch('https', 'www.dhlottery.co.kr', 443);
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.end();
   });
 }
 
@@ -83,71 +47,17 @@ exports.handler = async (event) => {
   };
 
   const params = event.queryStringParameters || {};
-  const { action, round, count } = params;
+  const { action, round } = params;
 
   try {
-    // 세션 쿠키 획득
-    const cookie = await getSessionCookie();
-
-    if (action === 'debug') {
-      const r = parseInt(round) || 1100;
-      // HTTP(비SSL) 직접 시도
-      const httpResult = await new Promise((resolve) => {
-        const req = http.request({
-          hostname: 'www.dhlottery.co.kr',
-          port: 80,
-          path: `/common.do?method=getLottoNumber&drwNo=${r}`,
-          method: 'GET',
-          timeout: 5000,
-          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*' },
-        }, (res) => {
-          let data = '';
-          res.on('data', chunk => data += chunk);
-          res.on('end', () => resolve({ status: res.statusCode, location: res.headers.location || null, body: data.substring(0, 300) }));
-        });
-        req.on('error', (e) => resolve({ error: e.message }));
-        req.on('timeout', () => { req.destroy(); resolve({ error: 'timeout' }); });
-        req.end();
-      });
-      const httpsResult = await fetchLotto(r, cookie);
-      return {
-        statusCode: 200, headers,
-        body: JSON.stringify({ round: r, httpResult, httpsResult }),
-      };
-    }
-
     if (action === 'fetch') {
       const r = parseInt(round);
       if (!r || r < 1) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid round' }) };
-      const result = await fetchLotto(r, cookie);
+      const result = await fetchFromDhlottery(r);
       return { statusCode: 200, headers, body: JSON.stringify(result || { returnValue: 'fail' }) };
     }
 
-    if (action === 'bulk') {
-      const n = Math.min(parseInt(count) || 50, 100);
-      let latest = getCurrentRound();
-
-      // 최신 회차 찾기
-      let test = await fetchLotto(latest, cookie);
-      if (!test) { latest--; test = await fetchLotto(latest, cookie); }
-      if (!test) { latest--; test = await fetchLotto(latest, cookie); }
-      if (!test) {
-        return { statusCode: 200, headers, body: JSON.stringify({ results: [], latestRound: latest, error: 'API unavailable' }) };
-      }
-
-      // 병렬 요청
-      const promises = [Promise.resolve(test)];
-      for (let i = 1; i < n; i++) {
-        promises.push(fetchLotto(latest - i, cookie));
-      }
-      const all = await Promise.all(promises);
-      const results = all.filter(Boolean);
-
-      return { statusCode: 200, headers, body: JSON.stringify({ results, latestRound: latest }) };
-    }
-
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Use: fetch, bulk, debug' }) };
-
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Use: fetch' }) };
   } catch (err) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }

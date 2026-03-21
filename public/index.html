@@ -406,8 +406,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 <div class="copy-toast" id="copyToast">번호가 복사되었습니다</div>
 
 <script>
-const API_BASE = '/api/lotto';
-let allData = [], freqMap = {}, latestRound = 0;
+let allData = [], freqMap = {}, latestRound = 0, fullData = [];
 let lottoSetCount = 5, pensionSetCount = 5;
 let includeNums = new Set(), excludeNums = new Set();
 const LEVEL_LABELS = ['OFF', '약간', '보통', '강하게', '매우강', '최대'];
@@ -417,28 +416,30 @@ async function init() {
   initNumGrid();
   renderHistory('lotto');
   renderHistory('pension');
-  await loadData(parseInt(document.getElementById('analysisRange').value));
+  await loadData();
 }
 
-async function loadData(count) {
+async function loadData() {
   setStatus('데이터 불러오는 중...', 'loading');
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
-    const res = await fetch(`${API_BASE}?action=bulk&count=${count}`, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    const json = await res.json();
-    allData = json.results || [];
-    latestRound = json.latestRound || 0;
-    if (!allData.length) throw new Error(json.error || 'No data');
-    buildFreqMap(); renderLastDraw(); renderStats();
-    setStatus(`${latestRound}회차 기준 \u00b7 ${allData.length}회 분석`, 'ok');
-    document.getElementById('genBtn').disabled = false;
+    const res = await fetch('/data/lotto.json');
+    fullData = await res.json();
+    fullData.sort((a, b) => b.drwNo - a.drwNo);
+    latestRound = fullData[0].drwNo;
+    applyRange();
   } catch (e) {
     setStatus('데이터 로딩 실패', 'error');
     document.getElementById('lastDraw').innerHTML = `<button class="gen-btn retry-btn" onclick="init()">다시 시도</button>`;
     console.error(e);
   }
+}
+
+function applyRange() {
+  const count = parseInt(document.getElementById('analysisRange').value);
+  allData = fullData.slice(0, count);
+  buildFreqMap(); renderLastDraw(); renderStats();
+  setStatus(`${latestRound}회차 기준 \u00b7 ${allData.length}회 분석`, 'ok');
+  document.getElementById('genBtn').disabled = false;
 }
 
 function setStatus(msg, state) {
@@ -447,10 +448,8 @@ function setStatus(msg, state) {
   document.getElementById('statusChip').className = 'status-chip' + cls;
 }
 
-async function changeAnalysisRange() {
-  const count = parseInt(document.getElementById('analysisRange').value);
-  document.getElementById('genBtn').disabled = true;
-  await loadData(count);
+function changeAnalysisRange() {
+  if (fullData.length) applyRange();
 }
 
 // --- Freq map ---
