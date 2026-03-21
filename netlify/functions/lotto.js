@@ -3,32 +3,47 @@ const https = require('https');
 
 function fetchLotto(round) {
   return new Promise((resolve) => {
-    const parsed = new URL(`https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`);
-    const options = {
-      hostname: parsed.hostname,
-      path: parsed.pathname + parsed.search,
-      method: 'GET',
-      timeout: 5000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'identity',
-        'Connection': 'keep-alive',
-        'Referer': 'https://www.dhlottery.co.kr/',
-      },
+    const reqHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'identity',
+      'Connection': 'keep-alive',
+      'Referer': 'https://www.dhlottery.co.kr/',
     };
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try { resolve(JSON.parse(data)); }
-        catch { resolve({ returnValue: 'fail', raw: data.substring(0, 200) }); }
+
+    function doRequest(url, redirectCount) {
+      if (redirectCount > 3) { resolve({ returnValue: 'fail', error: 'too many redirects' }); return; }
+      const parsed = new URL(url);
+      const protocol = parsed.protocol === 'https:' ? https : require('http');
+      const options = {
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        method: 'GET',
+        timeout: 5000,
+        headers: reqHeaders,
+      };
+      const req = protocol.request(options, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const redirectUrl = res.headers.location.startsWith('http')
+            ? res.headers.location
+            : `${parsed.protocol}//${parsed.hostname}${res.headers.location}`;
+          doRequest(redirectUrl, redirectCount + 1);
+          return;
+        }
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try { resolve(JSON.parse(data)); }
+          catch { resolve({ returnValue: 'fail', raw: data.substring(0, 200) }); }
+        });
       });
-    });
-    req.on('error', (e) => resolve({ returnValue: 'fail', error: e.message }));
-    req.on('timeout', () => { req.destroy(); resolve({ returnValue: 'fail', error: 'timeout' }); });
-    req.end();
+      req.on('error', (e) => resolve({ returnValue: 'fail', error: e.message }));
+      req.on('timeout', () => { req.destroy(); resolve({ returnValue: 'fail', error: 'timeout' }); });
+      req.end();
+    }
+
+    doRequest(`https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`, 0);
   });
 }
 
