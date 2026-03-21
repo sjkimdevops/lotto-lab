@@ -2,9 +2,16 @@
 const https = require('https');
 
 function fetchLotto(round) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const url = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`;
-    const req = https.get(url, { timeout: 4000 }, (res) => {
+    const options = {
+      timeout: 4000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; LottoLab/1.0)',
+        'Accept': 'application/json',
+      },
+    };
+    const req = https.get(url, options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {

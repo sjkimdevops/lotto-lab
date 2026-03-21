@@ -420,7 +420,10 @@ async function init() {
 async function loadData(count) {
   setStatus('데이터 불러오는 중...', 'loading');
   try {
-    const res = await fetch(`${API_BASE}?action=bulk&count=${count}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(`${API_BASE}?action=bulk&count=${count}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const json = await res.json();
     allData = json.results || [];
     latestRound = json.latestRound || 0;
