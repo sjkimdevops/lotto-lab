@@ -91,10 +91,28 @@ exports.handler = async (event) => {
 
     if (action === 'debug') {
       const r = parseInt(round) || 1100;
-      const result = await fetchLotto(r, cookie);
+      // HTTP(비SSL) 직접 시도
+      const httpResult = await new Promise((resolve) => {
+        const req = http.request({
+          hostname: 'www.dhlottery.co.kr',
+          port: 80,
+          path: `/common.do?method=getLottoNumber&drwNo=${r}`,
+          method: 'GET',
+          timeout: 5000,
+          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*' },
+        }, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => resolve({ status: res.statusCode, location: res.headers.location || null, body: data.substring(0, 300) }));
+        });
+        req.on('error', (e) => resolve({ error: e.message }));
+        req.on('timeout', () => { req.destroy(); resolve({ error: 'timeout' }); });
+        req.end();
+      });
+      const httpsResult = await fetchLotto(r, cookie);
       return {
         statusCode: 200, headers,
-        body: JSON.stringify({ round: r, hasCookie: !!cookie, cookie: cookie.substring(0, 80), result }),
+        body: JSON.stringify({ round: r, httpResult, httpsResult }),
       };
     }
 
