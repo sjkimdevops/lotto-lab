@@ -1,49 +1,71 @@
 // Netlify Serverless Function: 동행복권 API 프록시
+const http = require('http');
 const https = require('https');
 
-function fetchLotto(round) {
+// 세션 쿠키를 받아온 후 API 호출
+function getSessionCookie() {
   return new Promise((resolve) => {
-    const reqHeaders = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Accept-Encoding': 'identity',
-      'Connection': 'keep-alive',
-      'Referer': 'https://www.dhlottery.co.kr/',
-    };
+    const req = https.request({
+      hostname: 'www.dhlottery.co.kr',
+      path: '/',
+      method: 'GET',
+      timeout: 5000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    }, (res) => {
+      const cookies = (res.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+      res.resume(); // drain
+      res.on('end', () => resolve(cookies));
+    });
+    req.on('error', () => resolve(''));
+    req.on('timeout', () => { req.destroy(); resolve(''); });
+    req.end();
+  });
+}
 
-    function doRequest(url, redirectCount) {
-      if (redirectCount > 3) { resolve({ returnValue: 'fail', error: 'too many redirects' }); return; }
-      const parsed = new URL(url);
-      const protocol = parsed.protocol === 'https:' ? https : require('http');
-      const options = {
-        hostname: parsed.hostname,
-        path: parsed.pathname + parsed.search,
+function fetchLotto(round, cookie) {
+  return new Promise((resolve) => {
+    // HTTPS 시도
+    function tryFetch(protocol, hostname, port) {
+      const mod = protocol === 'https' ? https : http;
+      const req = mod.request({
+        hostname,
+        port,
+        path: `/common.do?method=getLottoNumber&drwNo=${round}`,
         method: 'GET',
         timeout: 5000,
-        headers: reqHeaders,
-      };
-      const req = protocol.request(options, (res) => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          const redirectUrl = res.headers.location.startsWith('http')
-            ? res.headers.location
-            : `${parsed.protocol}//${parsed.hostname}${res.headers.location}`;
-          doRequest(redirectUrl, redirectCount + 1);
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          'Referer': 'https://www.dhlottery.co.kr/gameResult.do?method=byWin',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cookie': cookie || '',
+        },
+      }, (res) => {
+        // 리다이렉트면 실패 처리
+        if (res.statusCode >= 300 && res.statusCode < 400) {
+          res.resume();
+          res.on('end', () => resolve(null));
           return;
         }
         let data = '';
         res.on('data', chunk => data += chunk);
         res.on('end', () => {
-          try { resolve(JSON.parse(data)); }
-          catch { resolve({ returnValue: 'fail', raw: data.substring(0, 200) }); }
+          try {
+            const json = JSON.parse(data);
+            if (json.returnValue === 'success') resolve(json);
+            else resolve(null);
+          } catch { resolve(null); }
         });
       });
-      req.on('error', (e) => resolve({ returnValue: 'fail', error: e.message }));
-      req.on('timeout', () => { req.destroy(); resolve({ returnValue: 'fail', error: 'timeout' }); });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
       req.end();
     }
 
-    doRequest(`https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`, 0);
+    tryFetch('https', 'www.dhlottery.co.kr', 443);
   });
 }
 
@@ -64,81 +86,49 @@ exports.handler = async (event) => {
   const { action, round, count } = params;
 
   try {
-    // 디버그용: 단일 회차 raw 응답 확인
+    // 세션 쿠키 획득
+    const cookie = await getSessionCookie();
+
     if (action === 'debug') {
       const r = parseInt(round) || 1100;
-      const url = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${r}`;
-      // 리다이렉트 추적 디버그
-      const debugInfo = await new Promise((resolve) => {
-        const parsed = new URL(url);
-        const opts = {
-          hostname: parsed.hostname,
-          path: parsed.pathname + parsed.search,
-          method: 'GET',
-          timeout: 5000,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Referer': 'https://www.dhlottery.co.kr/',
-          },
-        };
-        const req = https.request(opts, (res) => {
-          let data = '';
-          res.on('data', chunk => data += chunk);
-          res.on('end', () => {
-            resolve({
-              statusCode: res.statusCode,
-              location: res.headers.location || null,
-              contentType: res.headers['content-type'] || null,
-              bodyPreview: data.substring(0, 300),
-            });
-          });
-        });
-        req.on('error', (e) => resolve({ error: e.message }));
-        req.on('timeout', () => { req.destroy(); resolve({ error: 'timeout' }); });
-        req.end();
-      });
-      const result = await fetchLotto(r);
-      return { statusCode: 200, headers, body: JSON.stringify({ round: r, debugInfo, result }) };
-    }
-
-    if (action === 'latest') {
-      let r = getCurrentRound();
-      let result = await fetchLotto(r);
-      if (result.returnValue !== 'success') {
-        r--;
-        result = await fetchLotto(r);
-      }
-      return { statusCode: 200, headers, body: JSON.stringify({ latestRound: result.returnValue === 'success' ? r : r - 1 }) };
+      const result = await fetchLotto(r, cookie);
+      return {
+        statusCode: 200, headers,
+        body: JSON.stringify({ round: r, hasCookie: !!cookie, cookie: cookie.substring(0, 80), result }),
+      };
     }
 
     if (action === 'fetch') {
       const r = parseInt(round);
       if (!r || r < 1) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid round' }) };
-      const result = await fetchLotto(r);
-      return { statusCode: 200, headers, body: JSON.stringify(result) };
+      const result = await fetchLotto(r, cookie);
+      return { statusCode: 200, headers, body: JSON.stringify(result || { returnValue: 'fail' }) };
     }
 
     if (action === 'bulk') {
       const n = Math.min(parseInt(count) || 50, 100);
       let latest = getCurrentRound();
-      let test = await fetchLotto(latest);
-      if (test.returnValue !== 'success') {
-        latest--;
-        test = await fetchLotto(latest);
-        if (test.returnValue !== 'success') latest--;
+
+      // 최신 회차 찾기
+      let test = await fetchLotto(latest, cookie);
+      if (!test) { latest--; test = await fetchLotto(latest, cookie); }
+      if (!test) { latest--; test = await fetchLotto(latest, cookie); }
+      if (!test) {
+        return { statusCode: 200, headers, body: JSON.stringify({ results: [], latestRound: latest, error: 'API unavailable' }) };
       }
 
-      const promises = [];
-      for (let i = 0; i < n; i++) {
-        promises.push(fetchLotto(latest - i));
+      // 병렬 요청
+      const promises = [Promise.resolve(test)];
+      for (let i = 1; i < n; i++) {
+        promises.push(fetchLotto(latest - i, cookie));
       }
       const all = await Promise.all(promises);
-      const results = all.filter(r => r.returnValue === 'success');
+      const results = all.filter(Boolean);
 
       return { statusCode: 200, headers, body: JSON.stringify({ results, latestRound: latest }) };
     }
 
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action. Use: latest, fetch, bulk, debug' }) };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Use: fetch, bulk, debug' }) };
 
   } catch (err) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
