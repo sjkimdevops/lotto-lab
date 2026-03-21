@@ -403,7 +403,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 <div class="copy-toast" id="copyToast">번호가 복사되었습니다</div>
 
 <script>
-const API_BASE = '/api/lotto';
+const LOTTO_API = 'https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=';
+const PROXY_API = '/api/lotto';
 let allData = [], freqMap = {}, latestRound = 0;
 let lottoSetCount = 5, pensionSetCount = 5;
 let includeNums = new Set(), excludeNums = new Set();
@@ -417,16 +418,52 @@ async function init() {
   await loadData(parseInt(document.getElementById('analysisRange').value));
 }
 
+function getCurrentRound() {
+  const start = new Date('2002-12-07T18:00:00+09:00');
+  const now = new Date();
+  return Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
+}
+
+async function fetchSingleRound(round) {
+  try {
+    const res = await fetch(LOTTO_API + round);
+    const json = await res.json();
+    if (json.returnValue === 'success') return json;
+  } catch {}
+  // 직접 호출 실패 시 프록시 사용
+  try {
+    const res = await fetch(`${PROXY_API}?action=fetch&round=${round}`);
+    const json = await res.json();
+    if (json.returnValue === 'success') return json;
+  } catch {}
+  return null;
+}
+
 async function loadData(count) {
   setStatus('데이터 불러오는 중...', 'loading');
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-    const res = await fetch(`${API_BASE}?action=bulk&count=${count}`, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    const json = await res.json();
-    allData = json.results || [];
-    latestRound = json.latestRound || 0;
+    // 최신 회차 찾기
+    let latest = getCurrentRound();
+    let test = await fetchSingleRound(latest);
+    if (!test) { latest--; test = await fetchSingleRound(latest); }
+    if (!test) { latest--; test = await fetchSingleRound(latest); }
+    if (!test) throw new Error('최신 회차를 찾을 수 없습니다');
+
+    latestRound = latest;
+
+    // 병렬로 회차 데이터 가져오기 (10개씩 배치)
+    allData = [test];
+    const batchSize = 10;
+    for (let i = 1; i < count; i += batchSize) {
+      const batch = [];
+      for (let j = i; j < Math.min(i + batchSize, count); j++) {
+        batch.push(fetchSingleRound(latest - j));
+      }
+      const results = await Promise.all(batch);
+      allData.push(...results.filter(Boolean));
+      setStatus(`데이터 불러오는 중... (${allData.length}/${count})`, 'loading');
+    }
+
     buildFreqMap(); renderLastDraw(); renderStats();
     setStatus(`${latestRound}회차 기준 \u00b7 ${allData.length}회 분석`, 'ok');
     document.getElementById('genBtn').disabled = false;
