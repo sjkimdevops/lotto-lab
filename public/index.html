@@ -2,7 +2,10 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6fa">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>성진 복권 마트</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -210,10 +213,64 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#c0c5d0;border-radius:4px}
 
-@media(max-width:400px){
+/* Mobile: 480px 이하 */
+@media(max-width:480px){
+  .container{padding:1rem .8rem 3rem;padding-top:max(1rem, env(safe-area-inset-top));padding-bottom:max(3rem, env(safe-area-inset-bottom))}
+  .header h1{font-size:1.7rem}
+  .main-tab{padding:.6rem .3rem;min-height:44px}
+  .main-tab .tab-name{font-size:.78rem}
+  .main-tab .tab-desc{font-size:.6rem}
+  .sub-tab{padding:.5rem .3rem;min-height:38px;font-size:.72rem}
+  .card{padding:1rem;margin-bottom:.8rem}
+  .ball{width:38px;height:38px;font-size:.82rem}
+  .ball-sm{width:28px;height:28px;font-size:.68rem}
+  .gen-btn{padding:.75rem;font-size:.85rem;min-height:44px}
+  .option-row{padding:.6rem 0}
+  .option-label{font-size:.78rem}
+  .level-slider{width:80px}
   .stat-grid{grid-template-columns:repeat(2,1fr)}
-  .ball{width:36px;height:36px;font-size:.8rem}
+  .num-grid{grid-template-columns:repeat(9,1fr);gap:3px}
+  .num-cell{font-size:.58rem}
+  .prize-table{font-size:.65rem}
+  .prize-table th,.prize-table td{padding:.3rem .25rem}
+  .ticket-digit{width:24px;height:30px;font-size:1rem}
+  .ticket-group{font-size:.85rem;padding:.25rem .5rem}
+  .digit-slot{width:32px;height:38px;font-size:1rem}
+  .digit-fix{gap:.35rem}
+  .group-chip{padding:.3rem .55rem;font-size:.72rem}
+  .stepper button{width:32px;height:32px}
+  .freq-row{gap:.3rem}
+  .freq-cnt{width:40px;font-size:.65rem}
+  .result-set{padding:.6rem .8rem}
+  .copy-toast{bottom:max(1.5rem, env(safe-area-inset-bottom))}
+}
+/* Very small: 360px 이하 */
+@media(max-width:360px){
+  html{font-size:13px}
+  .header h1{font-size:1.5rem}
+  .ball{width:34px;height:34px;font-size:.75rem}
+  .ball-sm{width:26px;height:26px;font-size:.62rem}
   .num-grid{grid-template-columns:repeat(7,1fr)}
+  .ticket-digits{gap:.15rem}
+  .ticket-digit{width:22px;height:28px;font-size:.9rem}
+  .stat-grid{gap:.4rem}
+  .stat-box .val{font-size:1.1rem}
+  .digit-slot{width:28px;height:34px;font-size:.9rem}
+  .level-slider{width:65px}
+}
+/* 테이블 가로 스크롤 방지 */
+.prize-table{overflow-x:auto;display:block}
+.prize-table table{min-width:100%}
+/* 모바일 터치: hover 잔류 방지 */
+@media(hover:none){
+  .card:hover{border-color:var(--border)}
+  .card.pension-card:hover{border-color:var(--border)}
+  .ticket:hover{transform:none;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .gen-btn:hover{transform:none}
+  .result-set:hover{border-color:var(--border)}
+  .result-set .copy-hint{opacity:.6}
+  .ticket .ticket-copy-hint{opacity:.6}
+  .ball:hover{transform:none}
 }
 </style>
 </head>
@@ -373,12 +430,12 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
       <div class="card pension-card">
         <div class="card-label">자릿수 고정 (빈칸 = 랜덤)</div>
         <div class="digit-fix">
-          <input class="digit-slot" id="pDigit1" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit2')">
-          <input class="digit-slot" id="pDigit2" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit3')">
-          <input class="digit-slot" id="pDigit3" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit4')">
-          <input class="digit-slot" id="pDigit4" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit5')">
-          <input class="digit-slot" id="pDigit5" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit6')">
-          <input class="digit-slot" id="pDigit6" maxlength="1" placeholder="?" oninput="onDigitInput(this, null)">
+          <input class="digit-slot" id="pDigit1" maxlength="1" inputmode="numeric" placeholder="?" oninput="onDigitInput(this, 'pDigit2')">
+          <input class="digit-slot" id="pDigit2" maxlength="1" inputmode="numeric" placeholder="?" oninput="onDigitInput(this, 'pDigit3')">
+          <input class="digit-slot" id="pDigit3" maxlength="1" inputmode="numeric" placeholder="?" oninput="onDigitInput(this, 'pDigit4')">
+          <input class="digit-slot" id="pDigit4" maxlength="1" inputmode="numeric" placeholder="?" oninput="onDigitInput(this, 'pDigit5')">
+          <input class="digit-slot" id="pDigit5" maxlength="1" inputmode="numeric" placeholder="?" oninput="onDigitInput(this, 'pDigit6')">
+          <input class="digit-slot" id="pDigit6" maxlength="1" inputmode="numeric" placeholder="?" oninput="onDigitInput(this, null)">
         </div>
         <div class="digit-fix-hint">원하는 자리에 0~9 숫자를 입력하면 고정됩니다</div>
       </div>
