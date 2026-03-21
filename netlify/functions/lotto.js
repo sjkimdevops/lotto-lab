@@ -67,8 +67,38 @@ exports.handler = async (event) => {
     // 디버그용: 단일 회차 raw 응답 확인
     if (action === 'debug') {
       const r = parseInt(round) || 1100;
+      const url = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${r}`;
+      // 리다이렉트 추적 디버그
+      const debugInfo = await new Promise((resolve) => {
+        const parsed = new URL(url);
+        const opts = {
+          hostname: parsed.hostname,
+          path: parsed.pathname + parsed.search,
+          method: 'GET',
+          timeout: 5000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.dhlottery.co.kr/',
+          },
+        };
+        const req = https.request(opts, (res) => {
+          let data = '';
+          res.on('data', chunk => data += chunk);
+          res.on('end', () => {
+            resolve({
+              statusCode: res.statusCode,
+              location: res.headers.location || null,
+              contentType: res.headers['content-type'] || null,
+              bodyPreview: data.substring(0, 300),
+            });
+          });
+        });
+        req.on('error', (e) => resolve({ error: e.message }));
+        req.on('timeout', () => { req.destroy(); resolve({ error: 'timeout' }); });
+        req.end();
+      });
       const result = await fetchLotto(r);
-      return { statusCode: 200, headers, body: JSON.stringify({ round: r, result }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ round: r, debugInfo, result }) };
     }
 
     if (action === 'latest') {
