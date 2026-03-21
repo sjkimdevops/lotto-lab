@@ -4,19 +4,21 @@ const https = require('https');
 function fetchLotto(round) {
   return new Promise((resolve, reject) => {
     const url = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`;
-    https.get(url, { timeout: 8000 }, (res) => {
+    const req = https.get(url, { timeout: 4000 }, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try { resolve(JSON.parse(data)); }
-        catch { reject(new Error('JSON parse error')); }
+        catch { resolve({ returnValue: 'fail' }); }
       });
-    }).on('error', reject);
+    });
+    req.on('error', () => resolve({ returnValue: 'fail' }));
+    req.on('timeout', () => { req.destroy(); resolve({ returnValue: 'fail' }); });
   });
 }
 
 function getCurrentRound() {
-  const start = new Date('2002-12-07');
+  const start = new Date('2002-12-07T18:00:00+09:00');
   const now = new Date();
   return Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
 }
@@ -53,18 +55,20 @@ exports.handler = async (event) => {
       const n = Math.min(parseInt(count) || 50, 100);
       let latest = getCurrentRound();
       let test = await fetchLotto(latest);
-      if (test.returnValue !== 'success') latest--;
-
-      const results = [];
-      const batchSize = 10;
-      for (let i = 0; i < n; i += batchSize) {
-        const batch = [];
-        for (let j = i; j < Math.min(i + batchSize, n); j++) {
-          batch.push(fetchLotto(latest - j));
-        }
-        const batchResults = await Promise.all(batch);
-        results.push(...batchResults.filter(r => r.returnValue === 'success'));
+      if (test.returnValue !== 'success') {
+        latest--;
+        test = await fetchLotto(latest);
+        if (test.returnValue !== 'success') latest--;
       }
+
+      // 전체 병렬 요청
+      const promises = [];
+      for (let i = 0; i < n; i++) {
+        promises.push(fetchLotto(latest - i));
+      }
+      const all = await Promise.all(promises);
+      const results = all.filter(r => r.returnValue === 'success');
+
       return { statusCode: 200, headers, body: JSON.stringify({ results, latestRound: latest }) };
     }
 

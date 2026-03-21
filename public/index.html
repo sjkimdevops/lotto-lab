@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>복권 번호 추천기</title>
+<title>성진 복권 마트</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -30,9 +30,9 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 .status-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:.3rem .8rem;font-size:.72rem;color:var(--text2);display:flex;align-items:center;gap:.3rem}
 .status-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .status-chip.loading .dot{animation:pulse 1s infinite}
+.status-chip.error .dot{background:var(--ball-3)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* Main Tabs */
 .main-tabs{display:flex;gap:0;margin-bottom:1.5rem;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
 .main-tab{flex:1;padding:.75rem .5rem;text-align:center;cursor:pointer;transition:all .25s;border:none;background:var(--surface);position:relative}
 .main-tab .tab-icon{font-size:1.4rem;margin-bottom:.25rem}
@@ -47,7 +47,6 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 .main-tab:not([class*="active-"]){color:var(--text3)}
 .main-tab:not([class*="active-"]):hover{background:var(--surface2);color:var(--text2)}
 
-/* Sub tabs */
 .sub-tabs{display:flex;gap:.3rem;margin-bottom:1rem;background:var(--surface);border-radius:var(--radius-sm);padding:.25rem;border:1px solid var(--border)}
 .sub-tab{flex:1;padding:.4rem;text-align:center;border-radius:6px;font-size:.75rem;font-weight:500;cursor:pointer;transition:all .2s;color:var(--text3);border:none;background:none}
 .sub-tab.active{background:var(--surface2);color:var(--text)}
@@ -76,10 +75,17 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 .gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .gen-btn.pension-btn{background:linear-gradient(135deg,var(--pension-accent),#e84393);box-shadow:0 4px 20px var(--pension-glow)}
 .gen-btn.pension-btn:hover{box-shadow:0 6px 28px rgba(225,112,85,.4)}
+.gen-btn.retry-btn{background:linear-gradient(135deg,var(--ball-3),#c0392b);box-shadow:0 4px 20px rgba(231,76,60,.25);margin-top:1rem}
 
-.result-set{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.8rem 1rem;margin-top:.6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
-.result-set .set-label{font-size:.7rem;color:var(--text3);font-weight:500;width:100%;margin-bottom:.2rem}
+.result-set{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.8rem 1rem;margin-top:.6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;cursor:pointer;transition:border-color .2s}
+.result-set:hover{border-color:var(--accent)}
+.result-set .set-label{font-size:.7rem;color:var(--text3);font-weight:500;width:100%;margin-bottom:.2rem;display:flex;justify-content:space-between;align-items:center}
+.result-set .copy-hint{font-size:.6rem;color:var(--text3);opacity:0;transition:opacity .2s}
+.result-set:hover .copy-hint{opacity:1}
 .result-set .balls{margin:0}
+
+.copy-toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#fff;padding:.5rem 1.2rem;border-radius:20px;font-size:.8rem;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:100}
+.copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.5rem}
 .stat-box{background:var(--surface2);border-radius:var(--radius-sm);padding:.7rem;text-align:center}
@@ -113,6 +119,85 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 .toggle input:checked+.slider{background:var(--accent);border-color:var(--accent)}
 .toggle input:checked+.slider::before{transform:translateX(18px);background:#fff}
 
+.level-control{display:flex;align-items:center;gap:.5rem}
+.level-slider{-webkit-appearance:none;appearance:none;width:100px;height:6px;border-radius:3px;background:var(--surface2);outline:none;cursor:pointer}
+.level-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.hot-slider::-webkit-slider-thumb{background:var(--accent);border-color:var(--accent2)}
+.cold-slider::-webkit-slider-thumb{background:var(--ball-2);border-color:#6bb5f7}
+.hot-slider{background:linear-gradient(90deg,var(--surface2),var(--accent))}
+.cold-slider{background:linear-gradient(90deg,var(--surface2),var(--ball-2))}
+.level-label{font-family:'Outfit';font-size:.75rem;font-weight:600;min-width:3rem;text-align:center;color:var(--text2);padding:.15rem .4rem;background:var(--surface2);border-radius:4px}
+
+/* Number picker grid */
+.num-picker{margin-top:.5rem}
+.num-picker-label{font-size:.72rem;color:var(--text3);margin-bottom:.4rem;display:flex;justify-content:space-between;align-items:center}
+.num-picker-label button{background:none;border:none;color:var(--accent2);font-size:.68rem;cursor:pointer;text-decoration:underline}
+.num-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
+.num-cell{width:100%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Outfit';font-size:.65rem;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .15s;user-select:none}
+.num-cell:hover{border-color:var(--text2)}
+.num-cell.include{background:var(--accent);border-color:var(--accent);color:#fff}
+.num-cell.exclude{background:var(--ball-3);border-color:var(--ball-3);color:#fff;text-decoration:line-through}
+.num-picker-hint{font-size:.65rem;color:var(--text3);margin-top:.4rem;line-height:1.4}
+
+/* Analysis range */
+.range-control{display:flex;align-items:center;gap:.4rem}
+.range-control select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.78rem;padding:.3rem .5rem;cursor:pointer;font-family:'Noto Sans KR'}
+.range-control select:focus{outline:none;border-color:var(--accent)}
+
+/* History */
+.history-section{margin-top:1.5rem}
+.history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.history-header .card-label{margin-bottom:0}
+.history-clear{background:none;border:none;color:var(--ball-3);font-size:.7rem;cursor:pointer;opacity:.6;transition:opacity .2s}
+.history-clear:hover{opacity:1}
+.history-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.6rem .8rem;margin-bottom:.4rem;cursor:pointer;transition:border-color .2s}
+.history-item:hover{border-color:var(--accent)}
+.history-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem}
+.history-date{font-size:.65rem;color:var(--text3)}
+.history-type{font-size:.6rem;color:var(--accent2);background:rgba(108,92,231,.15);padding:.1rem .4rem;border-radius:4px}
+.history-type.pension{color:var(--pension-accent2);background:rgba(225,112,85,.15)}
+.history-nums{font-family:'Outfit';font-size:.8rem;font-weight:600;color:var(--text)}
+.history-empty{text-align:center;color:var(--text3);font-size:.78rem;padding:1.5rem 0}
+
+/* Pension: group selector */
+.group-selector{display:flex;gap:.4rem;margin-top:.3rem}
+.group-chip{padding:.35rem .7rem;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'Outfit';font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
+.group-chip:hover{border-color:var(--pension-accent)}
+.group-chip.active{background:var(--pension-accent);border-color:var(--pension-accent);color:#fff}
+
+/* Pension: digit fix */
+.digit-fix{display:flex;gap:.5rem;align-items:center;margin-top:.4rem;justify-content:center}
+.digit-slot{width:36px;height:42px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Outfit';font-size:1.1rem;font-weight:700;text-align:center;transition:all .15s;outline:none}
+.digit-slot:focus{border-color:var(--pension-accent);box-shadow:0 0 0 2px var(--pension-glow)}
+.digit-slot::placeholder{color:var(--text3);font-weight:400;font-size:.8rem}
+.digit-sep{color:var(--text3);font-size:.7rem;font-weight:500}
+.digit-fix-hint{font-size:.65rem;color:var(--text3);text-align:center;margin-top:.3rem}
+
+/* Pension: prize table */
+.prize-table{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.72rem}
+.prize-table th{text-align:left;padding:.35rem .4rem;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)}
+.prize-table td{padding:.35rem .4rem;border-bottom:1px solid rgba(42,48,80,.4)}
+.prize-table tr:last-child td{border:none}
+.prize-rank{font-family:'Outfit';font-weight:700;color:var(--pension-accent2)}
+.prize-amount{font-family:'Outfit';font-weight:600;color:var(--gold)}
+.prize-condition{color:var(--text2)}
+
+/* Pension: ticket card */
+.ticket{background:linear-gradient(135deg,#1e2538,#1a1f30);border:1.5px solid var(--border);border-radius:var(--radius);padding:1rem;margin-top:.6rem;position:relative;overflow:hidden;cursor:pointer;transition:all .2s}
+.ticket:hover{border-color:var(--pension-accent);transform:translateY(-1px)}
+.ticket::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--pension-accent),var(--gold),var(--pension-accent))}
+.ticket::after{content:'';position:absolute;top:50%;left:-6px;width:12px;height:12px;background:var(--bg);border-radius:50%;box-shadow:inset 0 0 0 1px var(--border)}
+.ticket-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem}
+.ticket-label{font-size:.68rem;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.ticket-copy-hint{font-size:.58rem;color:var(--text3);opacity:0;transition:opacity .2s}
+.ticket:hover .ticket-copy-hint{opacity:1}
+.ticket-body{display:flex;align-items:center;justify-content:center;gap:.4rem}
+.ticket-group{font-family:'Outfit';font-size:1rem;font-weight:700;color:var(--pension-accent2);background:rgba(225,112,85,.1);padding:.3rem .6rem;border-radius:8px;border:1px solid rgba(225,112,85,.2)}
+.ticket-divider{color:var(--text3);font-size:.8rem}
+.ticket-digits{display:flex;gap:.25rem}
+.ticket-digit{font-family:'Outfit';font-size:1.2rem;font-weight:700;color:var(--gold);width:28px;height:34px;display:flex;align-items:center;justify-content:center;background:rgba(255,211,42,.06);border-radius:6px;border:1px solid rgba(255,211,42,.12)}
+.ticket-digit.fixed{color:var(--ball-5);background:rgba(46,204,113,.08);border-color:rgba(46,204,113,.2)}
+
 .skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius-sm);height:40px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -126,30 +211,30 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 @media(max-width:400px){
   .stat-grid{grid-template-columns:repeat(2,1fr)}
   .ball{width:36px;height:36px;font-size:.8rem}
+  .num-grid{grid-template-columns:repeat(7,1fr)}
 }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
-    <h1>LUCKY LAB</h1>
+    <h1>성진 복권 마트</h1>
     <div class="sub">데이터 기반 번호 추천</div>
     <div class="status-bar">
       <div class="status-chip" id="statusChip"><span class="dot"></span><span id="statusText">준비중...</span></div>
     </div>
   </div>
 
-  <!-- 메인 탭: 두 복권 동등 레벨 -->
   <div class="main-tabs">
     <div class="main-tab active-lotto" id="mainTabLotto" onclick="switchMain('lotto')">
-      <div class="tab-icon">🎱</div>
+      <div class="tab-icon">&#127921;</div>
       <span class="tab-name">로또 6/45</span>
       <span class="tab-desc">1등 약 20억</span>
     </div>
     <div class="main-tab" id="mainTabPension" onclick="switchMain('pension')">
-      <div class="tab-icon">🏦</div>
+      <div class="tab-icon">&#127974;</div>
       <span class="tab-name">연금복권 720+</span>
-      <span class="tab-desc">월 700만 × 20년</span>
+      <span class="tab-desc">월 700만 x 20년</span>
     </div>
   </div>
 
@@ -158,6 +243,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
     <div class="sub-tabs">
       <div class="sub-tab active" data-sub="lotto-gen" onclick="switchSub('lotto-gen')">번호 생성</div>
       <div class="sub-tab" data-sub="lotto-stats" onclick="switchSub('lotto-stats')">통계 분석</div>
+      <div class="sub-tab" data-sub="lotto-history" onclick="switchSub('lotto-history')">히스토리</div>
     </div>
 
     <div id="sub-lotto-gen">
@@ -170,22 +256,50 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
         <div class="option-row">
           <span class="option-label">생성 세트 수</span>
           <div class="stepper">
-            <button onclick="adjustSets('lotto',-1)">−</button>
+            <button onclick="adjustSets('lotto',-1)">&#8722;</button>
             <span id="lottoSetCount">5</span>
             <button onclick="adjustSets('lotto',1)">+</button>
           </div>
         </div>
         <div class="option-row">
-          <span class="option-label">핫넘버 포함</span>
-          <label class="toggle"><input type="checkbox" id="optHot" checked><span class="slider"></span></label>
+          <span class="option-label">분석 회차 수</span>
+          <div class="range-control">
+            <select id="analysisRange" onchange="changeAnalysisRange()">
+              <option value="10">최근 10회</option>
+              <option value="20">최근 20회</option>
+              <option value="50" selected>최근 50회</option>
+              <option value="100">최근 100회</option>
+            </select>
+          </div>
         </div>
         <div class="option-row">
-          <span class="option-label">콜드넘버 포함</span>
-          <label class="toggle"><input type="checkbox" id="optCold" checked><span class="slider"></span></label>
+          <span class="option-label">핫넘버 반영</span>
+          <div class="level-control">
+            <input type="range" id="optHotLevel" min="0" max="5" value="3" class="level-slider hot-slider" oninput="updateLevelLabel('hot')">
+            <span class="level-label" id="hotLevelLabel">보통</span>
+          </div>
+        </div>
+        <div class="option-row">
+          <span class="option-label">콜드넘버 반영</span>
+          <div class="level-control">
+            <input type="range" id="optColdLevel" min="0" max="5" value="1" class="level-slider cold-slider" oninput="updateLevelLabel('cold')">
+            <span class="level-label" id="coldLevelLabel">약간</span>
+          </div>
         </div>
         <div class="option-row">
           <span class="option-label">연속번호 허용</span>
           <label class="toggle"><input type="checkbox" id="optConsec"><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">번호 고정 / 제외</div>
+        <div class="num-picker">
+          <div class="num-picker-label">
+            <span>클릭: 고정 / 더블클릭: 제외</span>
+            <button onclick="resetPicker()">초기화</button>
+          </div>
+          <div class="num-grid" id="numGrid"></div>
+          <div class="num-picker-hint" id="pickerStatus">고정: 없음 | 제외: 없음</div>
         </div>
       </div>
       <button class="gen-btn" id="genBtn" onclick="generateLotto()" disabled>번호 생성하기</button>
@@ -210,14 +324,32 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
         <div id="coldChart"><div class="skeleton" style="height:200px"></div></div>
       </div>
     </div>
+
+    <div id="sub-lotto-history" class="hidden">
+      <div class="card">
+        <div class="history-header">
+          <div class="card-label">생성 히스토리</div>
+          <button class="history-clear" onclick="clearHistory('lotto')">전체 삭제</button>
+        </div>
+        <div id="lottoHistoryList"></div>
+      </div>
+    </div>
   </div>
 
   <!-- 연금복권 720+ 섹션 -->
   <div id="section-pension" class="hidden">
     <div class="card pension-card">
-      <div class="card-label">연금복권 720+</div>
-      <div class="card-title">조 번호(1자리) + 당첨번호(6자리)</div>
-      <div class="card-desc">1등: 월 700만원 × 20년 = 총 16.8억원<br>2등: 월 100만원 × 10년 = 총 1.2억원</div>
+      <div class="card-label">당첨 구조</div>
+      <table class="prize-table">
+        <tr><th>등수</th><th>당첨금</th><th>조건</th></tr>
+        <tr><td><span class="prize-rank">1등</span></td><td><span class="prize-amount">월 700만 x 20년</span></td><td class="prize-condition">조 + 6자리 모두 일치</td></tr>
+        <tr><td><span class="prize-rank">2등</span></td><td><span class="prize-amount">월 100만 x 10년</span></td><td class="prize-condition">6자리 모두 일치 (조 다름)</td></tr>
+        <tr><td><span class="prize-rank">3등</span></td><td><span class="prize-amount">100만원</span></td><td class="prize-condition">앞/뒤 5자리 일치</td></tr>
+        <tr><td><span class="prize-rank">4등</span></td><td><span class="prize-amount">10만원</span></td><td class="prize-condition">앞/뒤 4자리 일치</td></tr>
+        <tr><td><span class="prize-rank">5등</span></td><td><span class="prize-amount">5만원</span></td><td class="prize-condition">앞/뒤 3자리 일치</td></tr>
+        <tr><td><span class="prize-rank">6등</span></td><td><span class="prize-amount">5천원</span></td><td class="prize-condition">앞/뒤 2자리 일치</td></tr>
+        <tr><td><span class="prize-rank">7등</span></td><td><span class="prize-amount">1천원</span></td><td class="prize-condition">끝 1자리 일치</td></tr>
+      </table>
     </div>
 
     <div class="card pension-card">
@@ -225,47 +357,103 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
       <div class="option-row">
         <span class="option-label">생성 세트 수</span>
         <div class="stepper pension-stepper">
-          <button onclick="adjustSets('pension',-1)">−</button>
+          <button onclick="adjustSets('pension',-1)">&#8722;</button>
           <span id="pensionSetCount">5</span>
           <button onclick="adjustSets('pension',1)">+</button>
         </div>
       </div>
+      <div class="option-row" style="flex-wrap:wrap;gap:.4rem">
+        <span class="option-label" style="width:100%">조 번호 선택</span>
+        <div class="group-selector" id="groupSelector">
+          <div class="group-chip active" data-group="1" onclick="toggleGroup(1)">1조</div>
+          <div class="group-chip active" data-group="2" onclick="toggleGroup(2)">2조</div>
+          <div class="group-chip active" data-group="3" onclick="toggleGroup(3)">3조</div>
+          <div class="group-chip active" data-group="4" onclick="toggleGroup(4)">4조</div>
+          <div class="group-chip active" data-group="5" onclick="toggleGroup(5)">5조</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card pension-card">
+      <div class="card-label">자릿수 고정 (빈칸 = 랜덤)</div>
+      <div class="digit-fix">
+        <input class="digit-slot" id="pDigit1" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit2')">
+        <input class="digit-slot" id="pDigit2" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit3')">
+        <input class="digit-slot" id="pDigit3" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit4')">
+        <input class="digit-slot" id="pDigit4" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit5')">
+        <input class="digit-slot" id="pDigit5" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit6')">
+        <input class="digit-slot" id="pDigit6" maxlength="1" placeholder="?" oninput="onDigitInput(this, null)">
+      </div>
+      <div class="digit-fix-hint">원하는 자리에 0~9 숫자를 입력하면 고정됩니다</div>
     </div>
 
     <button class="gen-btn pension-btn" onclick="generatePension()">연금복권 번호 생성</button>
     <div id="pensionResults"></div>
+
+    <div class="card pension-card" style="margin-top:1rem">
+      <div class="history-header">
+        <div class="card-label">생성 히스토리</div>
+        <button class="history-clear" onclick="clearHistory('pension')">전체 삭제</button>
+      </div>
+      <div id="pensionHistoryList"></div>
+    </div>
   </div>
 </div>
+
+<div class="copy-toast" id="copyToast">번호가 복사되었습니다</div>
 
 <script>
 const API_BASE = '/api/lotto';
 let allData = [], freqMap = {}, latestRound = 0;
 let lottoSetCount = 5, pensionSetCount = 5;
+let includeNums = new Set(), excludeNums = new Set();
+const LEVEL_LABELS = ['OFF', '약간', '보통', '강하게', '매우강', '최대'];
 
+// --- Init ---
 async function init() {
-  setStatus('데이터 불러오는 중...', true);
+  initNumGrid();
+  renderHistory('lotto');
+  renderHistory('pension');
+  await loadData(parseInt(document.getElementById('analysisRange').value));
+}
+
+async function loadData(count) {
+  setStatus('데이터 불러오는 중...', 'loading');
   try {
-    const res = await fetch(`${API_BASE}?action=bulk&count=50`);
+    const res = await fetch(`${API_BASE}?action=bulk&count=${count}`);
     const json = await res.json();
     allData = json.results || [];
     latestRound = json.latestRound || 0;
     buildFreqMap(); renderLastDraw(); renderStats();
-    setStatus(`${latestRound}회차 기준 · ${allData.length}회 분석`, false);
+    setStatus(`${latestRound}회차 기준 \u00b7 ${allData.length}회 분석`, 'ok');
     document.getElementById('genBtn').disabled = false;
-  } catch (e) { setStatus('데이터 로딩 실패', false); console.error(e); }
+  } catch (e) {
+    setStatus('데이터 로딩 실패', 'error');
+    document.getElementById('lastDraw').innerHTML = `<button class="gen-btn retry-btn" onclick="init()">다시 시도</button>`;
+    console.error(e);
+  }
 }
 
-function setStatus(msg, loading) {
+function setStatus(msg, state) {
   document.getElementById('statusText').textContent = msg;
-  document.getElementById('statusChip').className = 'status-chip' + (loading ? ' loading' : '');
+  const cls = state === 'loading' ? ' loading' : state === 'error' ? ' error' : '';
+  document.getElementById('statusChip').className = 'status-chip' + cls;
 }
 
+async function changeAnalysisRange() {
+  const count = parseInt(document.getElementById('analysisRange').value);
+  document.getElementById('genBtn').disabled = true;
+  await loadData(count);
+}
+
+// --- Freq map ---
 function buildFreqMap() {
   freqMap = {};
   for (let i = 1; i <= 45; i++) freqMap[i] = 0;
   allData.forEach(d => { for (let i = 1; i <= 6; i++) freqMap[d[`drwtNo${i}`]]++; freqMap[d.bnusNo]++; });
 }
 
+// --- Navigation ---
 function switchMain(section) {
   document.getElementById('mainTabLotto').className = 'main-tab' + (section === 'lotto' ? ' active-lotto' : '');
   document.getElementById('mainTabPension').className = 'main-tab' + (section === 'pension' ? ' active-pension' : '');
@@ -275,8 +463,10 @@ function switchMain(section) {
 
 function switchSub(sub) {
   document.querySelectorAll('.sub-tab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
-  document.getElementById('sub-lotto-gen').classList.toggle('hidden', sub !== 'lotto-gen');
-  document.getElementById('sub-lotto-stats').classList.toggle('hidden', sub !== 'lotto-stats');
+  ['lotto-gen','lotto-stats','lotto-history'].forEach(s => {
+    const el = document.getElementById('sub-' + s);
+    if (el) el.classList.toggle('hidden', s !== sub);
+  });
 }
 
 function adjustSets(type, delta) {
@@ -284,6 +474,7 @@ function adjustSets(type, delta) {
   else { pensionSetCount = Math.max(1, Math.min(10, pensionSetCount + delta)); document.getElementById('pensionSetCount').textContent = pensionSetCount; }
 }
 
+// --- Ball rendering ---
 function ballClass(n) { if (n <= 10) return 'r1'; if (n <= 20) return 'r2'; if (n <= 30) return 'r3'; if (n <= 40) return 'r4'; return 'r5'; }
 function makeBall(n, sm = false) { return `<div class="ball ${ballClass(n)} ${sm ? 'ball-sm' : ''}">${n}</div>`; }
 
@@ -320,43 +511,208 @@ function renderStats() {
     <div class="freq-cnt">${c}</div></div>`).join('')}</div>`;
 }
 
+// --- Level slider ---
+function updateLevelLabel(type) {
+  const val = parseInt(document.getElementById(type === 'hot' ? 'optHotLevel' : 'optColdLevel').value);
+  document.getElementById(type === 'hot' ? 'hotLevelLabel' : 'coldLevelLabel').textContent = LEVEL_LABELS[val];
+}
+
+// --- Number picker (include/exclude) ---
+function initNumGrid() {
+  const grid = document.getElementById('numGrid');
+  let html = '';
+  for (let i = 1; i <= 45; i++) {
+    html += `<div class="num-cell" data-num="${i}" onclick="toggleNum(${i})" ondblclick="toggleExclude(${i})">${i}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function toggleNum(n) {
+  if (excludeNums.has(n)) { excludeNums.delete(n); }
+  else if (includeNums.has(n)) { includeNums.delete(n); }
+  else {
+    if (includeNums.size >= 5) return;
+    includeNums.add(n);
+  }
+  updatePickerUI();
+}
+
+function toggleExclude(n) {
+  includeNums.delete(n);
+  if (excludeNums.has(n)) { excludeNums.delete(n); }
+  else { excludeNums.add(n); }
+  updatePickerUI();
+}
+
+function resetPicker() {
+  includeNums.clear();
+  excludeNums.clear();
+  updatePickerUI();
+}
+
+function updatePickerUI() {
+  document.querySelectorAll('.num-cell').forEach(el => {
+    const n = parseInt(el.dataset.num);
+    el.className = 'num-cell' + (includeNums.has(n) ? ' include' : '') + (excludeNums.has(n) ? ' exclude' : '');
+  });
+  const incText = includeNums.size > 0 ? [...includeNums].sort((a,b)=>a-b).join(', ') : '없음';
+  const excText = excludeNums.size > 0 ? [...excludeNums].sort((a,b)=>a-b).join(', ') : '없음';
+  document.getElementById('pickerStatus').textContent = `고정: ${incText} | 제외: ${excText}`;
+}
+
+// --- Lotto generation ---
 function generateLotto() {
-  const useHot = document.getElementById('optHot').checked, useCold = document.getElementById('optCold').checked, allowConsec = document.getElementById('optConsec').checked;
+  const hotLevel = parseInt(document.getElementById('optHotLevel').value);
+  const coldLevel = parseInt(document.getElementById('optColdLevel').value);
+  const allowConsec = document.getElementById('optConsec').checked;
   const sorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
-  const hotNums = sorted.slice(0, 15).map(e => Number(e[0])), coldNums = sorted.slice(-15).map(e => Number(e[0]));
+  const hotNums = sorted.slice(0, 15).map(e => Number(e[0])).filter(n => !excludeNums.has(n));
+  const coldNums = sorted.slice(-15).map(e => Number(e[0])).filter(n => !excludeNums.has(n));
+  const hotWeight = hotLevel * 0.1;
+  const coldWeight = coldLevel * 0.1;
+  const totalWeight = hotWeight + coldWeight;
+  const hotProb = totalWeight > 0 ? hotWeight / (totalWeight + 1) : 0;
+  const coldProb = totalWeight > 0 ? coldWeight / (totalWeight + 1) : 0;
   const results = [];
   for (let s = 0; s < lottoSetCount; s++) {
-    let nums = new Set(), attempts = 0;
+    let nums = new Set(includeNums);
+    let attempts = 0;
     while (nums.size < 6 && attempts < 500) {
       attempts++; let n; const r = Math.random();
-      if (useHot && useCold) { if (r < 0.4) n = hotNums[Math.floor(Math.random() * hotNums.length)]; else if (r < 0.6) n = coldNums[Math.floor(Math.random() * coldNums.length)]; else n = Math.floor(Math.random() * 45) + 1; }
-      else if (useHot) { n = r < 0.5 ? hotNums[Math.floor(Math.random() * hotNums.length)] : Math.floor(Math.random() * 45) + 1; }
-      else if (useCold) { n = r < 0.5 ? coldNums[Math.floor(Math.random() * coldNums.length)] : Math.floor(Math.random() * 45) + 1; }
+      if (r < hotProb && hotNums.length) { n = hotNums[Math.floor(Math.random() * hotNums.length)]; }
+      else if (r < hotProb + coldProb && coldNums.length) { n = coldNums[Math.floor(Math.random() * coldNums.length)]; }
       else { n = Math.floor(Math.random() * 45) + 1; }
+      if (excludeNums.has(n)) continue;
       if (!allowConsec && nums.size > 0) { if ([...nums].some(x => Math.abs(x - n) === 1)) continue; }
       nums.add(n);
     }
     results.push([...nums].sort((a, b) => a - b));
   }
   document.getElementById('lottoResults').innerHTML = results.map((nums, i) => `
-    <div class="result-set" style="animation:fadeIn .3s ${i * .08}s both">
-      <div class="set-label">세트 ${String.fromCharCode(65 + i)}</div>
+    <div class="result-set" style="animation:fadeIn .3s ${i * .08}s both" onclick="copyNums('${nums.join(', ')}')">
+      <div class="set-label"><span>세트 ${String.fromCharCode(65 + i)}</span><span class="copy-hint">탭하여 복사</span></div>
       <div class="balls">${nums.map(n => makeBall(n, true)).join('')}</div>
     </div>`).join('');
+
+  saveHistory('lotto', results);
 }
 
-function generatePension() {
-  const groups = ['1','2','3','4','5'], sets = [];
-  for (let i = 0; i < pensionSetCount; i++) {
-    const group = groups[Math.floor(Math.random() * groups.length)];
-    let nums = ''; for (let j = 0; j < 6; j++) nums += Math.floor(Math.random() * 10);
-    sets.push({ group, nums });
+// --- Pension: group selector ---
+let selectedGroups = new Set([1,2,3,4,5]);
+
+function toggleGroup(g) {
+  if (selectedGroups.has(g)) {
+    if (selectedGroups.size <= 1) return;
+    selectedGroups.delete(g);
+  } else {
+    selectedGroups.add(g);
   }
-  document.getElementById('pensionResults').innerHTML = sets.map((s, i) => `
-    <div class="result-set" style="animation:fadeIn .3s ${i * .08}s both">
-      <div class="set-label">세트 ${i + 1}</div>
-      <div class="pension-group">${s.group}조 ${s.nums.split('').join(' ')}</div>
-    </div>`).join('');
+  document.querySelectorAll('.group-chip').forEach(el => {
+    el.classList.toggle('active', selectedGroups.has(parseInt(el.dataset.group)));
+  });
+}
+
+// --- Pension: digit input ---
+function onDigitInput(el, nextId) {
+  el.value = el.value.replace(/[^0-9]/g, '').slice(0, 1);
+  if (el.value && nextId) document.getElementById(nextId).focus();
+}
+
+function getFixedDigits() {
+  const digits = [];
+  for (let i = 1; i <= 6; i++) {
+    const v = document.getElementById('pDigit' + i).value;
+    digits.push(v !== '' ? v : null);
+  }
+  return digits;
+}
+
+// --- Pension generation ---
+function generatePension() {
+  const groups = [...selectedGroups];
+  const fixedDigits = getFixedDigits();
+  const sets = [];
+  for (let i = 0; i < pensionSetCount; i++) {
+    const group = String(groups[Math.floor(Math.random() * groups.length)]);
+    let nums = '';
+    for (let j = 0; j < 6; j++) {
+      nums += fixedDigits[j] !== null ? fixedDigits[j] : Math.floor(Math.random() * 10);
+    }
+    sets.push({ group, nums, fixedDigits: [...fixedDigits] });
+  }
+  document.getElementById('pensionResults').innerHTML = sets.map((s, i) => {
+    const digitHtml = s.nums.split('').map((d, j) =>
+      `<div class="ticket-digit${s.fixedDigits[j] !== null ? ' fixed' : ''}">${d}</div>`
+    ).join('');
+    return `<div class="ticket" style="animation:fadeIn .3s ${i * .08}s both" onclick="copyNums('${s.group}조 ${s.nums}')">
+      <div class="ticket-header">
+        <span class="ticket-label">세트 ${i + 1}</span>
+        <span class="ticket-copy-hint">탭하여 복사</span>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-group">${s.group}조</div>
+        <span class="ticket-divider">-</span>
+        <div class="ticket-digits">${digitHtml}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  saveHistory('pension', sets.map(s => `${s.group}조 ${s.nums}`));
+}
+
+// --- Copy to clipboard ---
+function copyNums(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById('copyToast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1500);
+  });
+}
+
+// --- History (localStorage) ---
+function getHistory(type) {
+  try { return JSON.parse(localStorage.getItem(`lotto_history_${type}`) || '[]'); }
+  catch { return []; }
+}
+
+function saveHistory(type, data) {
+  const history = getHistory(type);
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  history.unshift({ date: dateStr, data });
+  if (history.length > 30) history.length = 30;
+  localStorage.setItem(`lotto_history_${type}`, JSON.stringify(history));
+  renderHistory(type);
+}
+
+function clearHistory(type) {
+  localStorage.removeItem(`lotto_history_${type}`);
+  renderHistory(type);
+}
+
+function renderHistory(type) {
+  const list = document.getElementById(type === 'lotto' ? 'lottoHistoryList' : 'pensionHistoryList');
+  if (!list) return;
+  const history = getHistory(type);
+  if (!history.length) {
+    list.innerHTML = '<div class="history-empty">아직 생성 기록이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = history.map(item => {
+    const numsHtml = type === 'lotto'
+      ? item.data.map(nums => nums.join(', ')).join(' | ')
+      : item.data.join(' | ');
+    const copyText = type === 'lotto'
+      ? item.data.map(nums => nums.join(', ')).join('\n')
+      : item.data.join('\n');
+    return `<div class="history-item" onclick="copyNums(\`${copyText.replace(/`/g, '')}\`)">
+      <div class="history-meta">
+        <span class="history-date">${item.date}</span>
+        <span class="history-type ${type === 'pension' ? 'pension' : ''}">${type === 'lotto' ? '로또 6/45' : '연금복권'}</span>
+      </div>
+      <div class="history-nums">${numsHtml}</div>
+    </div>`;
+  }).join('');
 }
 
 init();
