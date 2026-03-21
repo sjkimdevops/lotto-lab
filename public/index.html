@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로또 번호 추천기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0e14;--surface:#141722;--surface2:#1a1f2e;--surface3:#222840;
+  --border:#2a3050;--text:#e8eaf0;--text2:#8892b0;--text3:#505a78;
+  --accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.25);
+  --gold:#ffd32a;--gold-dim:#b8960a;
+  --ball-1:#ffc312;--ball-2:#4a90d9;--ball-3:#e74c3c;--ball-4:#7f8c8d;--ball-5:#2ecc71;
+  --radius:14px;--radius-sm:8px;
+}
+html{font-size:15px}
+body{font-family:'Noto Sans KR','Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;background:radial-gradient(ellipse at 50% 0%,rgba(108,92,231,.12) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+.container{max-width:640px;margin:0 auto;padding:1.5rem 1rem 4rem;position:relative;z-index:1}
+
+.header{text-align:center;margin-bottom:2rem;padding-top:1rem}
+.header h1{font-family:'Outfit',sans-serif;font-size:2rem;font-weight:800;background:linear-gradient(135deg,var(--accent2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em;line-height:1.2}
+.header .sub{color:var(--text2);font-size:.82rem;margin-top:.4rem;font-weight:300}
+.status-bar{display:flex;justify-content:center;gap:.6rem;margin-top:1rem;flex-wrap:wrap}
+.status-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:.3rem .8rem;font-size:.72rem;color:var(--text2);display:flex;align-items:center;gap:.3rem}
+.status-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.status-chip.loading .dot{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.tabs{display:flex;gap:.4rem;margin-bottom:1.5rem;background:var(--surface);border-radius:var(--radius);padding:.3rem;border:1px solid var(--border)}
+.tab{flex:1;padding:.55rem;text-align:center;border-radius:var(--radius-sm);font-size:.8rem;font-weight:500;cursor:pointer;transition:all .2s;color:var(--text2);border:none;background:none}
+.tab.active{background:var(--accent);color:#fff;box-shadow:0 2px 12px var(--accent-glow)}
+.tab:hover:not(.active){color:var(--text);background:var(--surface2)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;margin-bottom:1rem;transition:border-color .2s}
+.card:hover{border-color:var(--accent)}
+.card-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.7rem;font-weight:500}
+.card-title{font-size:.95rem;font-weight:600;margin-bottom:.3rem}
+.card-desc{font-size:.78rem;color:var(--text2);line-height:1.5}
+
+.balls{display:flex;gap:8px;flex-wrap:wrap;margin:.6rem 0}
+.ball{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Outfit';font-size:.9rem;font-weight:700;transition:transform .2s;cursor:default;position:relative}
+.ball:hover{transform:scale(1.15)}
+.ball.r1{background:var(--ball-1);color:#4a3500;box-shadow:0 2px 8px rgba(255,195,18,.3)}
+.ball.r2{background:var(--ball-2);color:#fff;box-shadow:0 2px 8px rgba(74,144,217,.3)}
+.ball.r3{background:var(--ball-3);color:#fff;box-shadow:0 2px 8px rgba(231,76,60,.3)}
+.ball.r4{background:var(--ball-4);color:#fff;box-shadow:0 2px 8px rgba(127,140,141,.3)}
+.ball.r5{background:var(--ball-5);color:#fff;box-shadow:0 2px 8px rgba(46,204,113,.3)}
+.ball-sm{width:30px;height:30px;font-size:.72rem}
+.bonus-sep{display:flex;align-items:center;color:var(--text3);font-size:.8rem;margin:0 2px}
+
+.gen-btn{width:100%;padding:.85rem;border:none;border-radius:var(--radius);font-size:.9rem;font-weight:600;cursor:pointer;transition:all .25s;background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;box-shadow:0 4px 20px var(--accent-glow);margin-top:.5rem}
+.gen-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(108,92,231,.4)}
+.gen-btn:active{transform:translateY(0)}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+.result-set{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.8rem 1rem;margin-top:.6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.result-set .set-label{font-size:.7rem;color:var(--text3);font-weight:500;width:100%;margin-bottom:.2rem}
+.result-set .balls{margin:0}
+
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.5rem}
+.stat-box{background:var(--surface2);border-radius:var(--radius-sm);padding:.7rem;text-align:center}
+.stat-box .val{font-family:'Outfit';font-size:1.3rem;font-weight:700;color:var(--accent2)}
+.stat-box .lbl{font-size:.68rem;color:var(--text3);margin-top:.2rem}
+
+.freq-chart{margin-top:.8rem}
+.freq-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;font-size:.75rem}
+.freq-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Outfit';font-weight:600;font-size:.7rem;flex-shrink:0}
+.freq-bar-bg{flex:1;height:18px;background:var(--surface2);border-radius:9px;overflow:hidden;position:relative}
+.freq-bar{height:100%;border-radius:9px;transition:width .6s ease}
+.freq-cnt{font-family:'Outfit';font-size:.72rem;color:var(--text2);width:30px;text-align:right;flex-shrink:0}
+
+.pension-group{font-family:'Outfit';font-size:1.3rem;font-weight:600;letter-spacing:.15em;text-align:center;padding:.5rem 0;color:var(--gold)}
+
+.last-draw{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+
+.option-row{display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)}
+.option-row:last-child{border:none}
+.option-label{font-size:.82rem;color:var(--text)}
+.stepper{display:flex;align-items:center;gap:.3rem}
+.stepper button{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.stepper button:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.stepper span{font-family:'Outfit';font-size:.9rem;font-weight:600;min-width:1.5rem;text-align:center}
+
+.toggle{position:relative;width:40px;height:22px;cursor:pointer}
+.toggle input{display:none}
+.toggle .slider{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);border-radius:11px;transition:all .2s}
+.toggle .slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:var(--text2);top:2px;left:2px;transition:all .2s}
+.toggle input:checked+.slider{background:var(--accent);border-color:var(--accent)}
+.toggle input:checked+.slider::before{transform:translateX(18px);background:#fff}
+
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius-sm);height:40px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.hidden{display:none !important}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+@media(max-width:400px){
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .ball{width:36px;height:36px;font-size:.8rem}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>LOTTO LAB</h1>
+    <div class="sub">데이터 기반 번호 추천</div>
+    <div class="status-bar">
+      <div class="status-chip" id="statusChip"><span class="dot"></span><span id="statusText">준비중...</span></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="generate" onclick="switchTab('generate')">번호 생성</div>
+    <div class="tab" data-tab="stats" onclick="switchTab('stats')">통계 분석</div>
+    <div class="tab" data-tab="pension" onclick="switchTab('pension')">연금복권</div>
+  </div>
+
+  <div id="tab-generate">
+    <div class="card">
+      <div class="card-label">최근 당첨번호</div>
+      <div id="lastDraw"><div class="skeleton" style="width:100%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">생성 옵션</div>
+      <div class="option-row">
+        <span class="option-label">생성 세트 수</span>
+        <div class="stepper">
+          <button onclick="adjustSets(-1)">−</button>
+          <span id="setCount">5</span>
+          <button onclick="adjustSets(1)">+</button>
+        </div>
+      </div>
+      <div class="option-row">
+        <span class="option-label">핫넘버 포함</span>
+        <label class="toggle"><input type="checkbox" id="optHot" checked><span class="slider"></span></label>
+      </div>
+      <div class="option-row">
+        <span class="option-label">콜드넘버 포함</span>
+        <label class="toggle"><input type="checkbox" id="optCold" checked><span class="slider"></span></label>
+      </div>
+      <div class="option-row">
+        <span class="option-label">연속번호 허용</span>
+        <label class="toggle"><input type="checkbox" id="optConsec"><span class="slider"></span></label>
+      </div>
+    </div>
+    <button class="gen-btn" id="genBtn" onclick="generateNumbers()" disabled>번호 생성하기</button>
+    <div id="results"></div>
+  </div>
+
+  <div id="tab-stats" class="hidden">
+    <div class="card">
+      <div class="card-label">전체 통계</div>
+      <div class="stat-grid" id="statGrid">
+        <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
+        <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
+        <div class="stat-box"><div class="skeleton" style="height:50px"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">가장 많이 나온 번호 TOP 10</div>
+      <div id="hotChart"><div class="skeleton" style="height:200px"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">가장 적게 나온 번호 TOP 10</div>
+      <div id="coldChart"><div class="skeleton" style="height:200px"></div></div>
+    </div>
+  </div>
+
+  <div id="tab-pension" class="hidden">
+    <div class="card">
+      <div class="card-title">연금복권 720+</div>
+      <div class="card-desc">1등: 월 700만원 × 20년 (총 16.8억)</div>
+      <button class="gen-btn" onclick="generatePension()" style="margin-top:1rem">연금복권 번호 생성</button>
+      <div id="pensionResults"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '/api/lotto';
+let allData = [], freqMap = {}, latestRound = 0, setCount = 5;
+
+async function init() {
+  setStatus('데이터 불러오는 중...', true);
+  try {
+    const res = await fetch(`${API_BASE}?action=bulk&count=50`);
+    const json = await res.json();
+    allData = json.results || [];
+    latestRound = json.latestRound || 0;
+    buildFreqMap();
+    renderLastDraw();
+    renderStats();
+    setStatus(`${latestRound}회차 기준 · ${allData.length}회 분석`, false);
+    document.getElementById('genBtn').disabled = false;
+  } catch (e) {
+    setStatus('데이터 로딩 실패', false);
+    console.error(e);
+  }
+}
+
+function setStatus(msg, loading) {
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('statusChip').className = 'status-chip' + (loading ? ' loading' : '');
+}
+
+function buildFreqMap() {
+  freqMap = {};
+  for (let i = 1; i <= 45; i++) freqMap[i] = 0;
+  allData.forEach(d => {
+    for (let i = 1; i <= 6; i++) freqMap[d[`drwtNo${i}`]]++;
+    freqMap[d.bnusNo]++;
+  });
+}
+
+function ballClass(n) {
+  if (n <= 10) return 'r1'; if (n <= 20) return 'r2';
+  if (n <= 30) return 'r3'; if (n <= 40) return 'r4'; return 'r5';
+}
+function makeBall(n, sm = false) {
+  return `<div class="ball ${ballClass(n)} ${sm ? 'ball-sm' : ''}">${n}</div>`;
+}
+
+function renderLastDraw() {
+  if (!allData.length) return;
+  const d = allData[0];
+  const nums = [1,2,3,4,5,6].map(i => makeBall(d[`drwtNo${i}`]));
+  document.getElementById('lastDraw').innerHTML = `
+    <div class="card-title">${d.drwNo}회 (${d.drwNoDate})</div>
+    <div class="last-draw">
+      <div class="balls">${nums.join('')}</div>
+      <span class="bonus-sep">+</span>
+      ${makeBall(d.bnusNo)}
+    </div>`;
+}
+
+function renderStats() {
+  const sorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
+  const maxFreq = sorted[0][1];
+  const avg = (allData.reduce((s, d) => {
+    let sum = 0; for (let i = 1; i <= 6; i++) sum += d[`drwtNo${i}`]; return s + sum / 6;
+  }, 0) / allData.length).toFixed(1);
+  const oddEvenRatios = allData.map(d => {
+    let odd = 0; for (let i = 1; i <= 6; i++) if (d[`drwtNo${i}`] % 2 === 1) odd++; return odd;
+  });
+  const avgOdd = (oddEvenRatios.reduce((a, b) => a + b, 0) / oddEvenRatios.length).toFixed(1);
+
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-box"><div class="val">${allData.length}</div><div class="lbl">분석 회차</div></div>
+    <div class="stat-box"><div class="val">${avg}</div><div class="lbl">평균 번호</div></div>
+    <div class="stat-box"><div class="val">${avgOdd}:${(6 - parseFloat(avgOdd)).toFixed(1)}</div><div class="lbl">홀:짝 비율</div></div>`;
+
+  const hot10 = sorted.slice(0, 10);
+  document.getElementById('hotChart').innerHTML = `<div class="freq-chart">${hot10.map(([n, c]) => `
+    <div class="freq-row">
+      <div class="freq-num ${ballClass(Number(n))}" style="color:#fff;font-size:.65rem">${n}</div>
+      <div class="freq-bar-bg"><div class="freq-bar" style="width:${(c/maxFreq*100).toFixed(1)}%;background:var(--accent2)"></div></div>
+      <div class="freq-cnt">${c}</div>
+    </div>`).join('')}</div>`;
+
+  const cold10 = sorted.slice(-10).reverse();
+  document.getElementById('coldChart').innerHTML = `<div class="freq-chart">${cold10.map(([n, c]) => `
+    <div class="freq-row">
+      <div class="freq-num ${ballClass(Number(n))}" style="color:#fff;font-size:.65rem">${n}</div>
+      <div class="freq-bar-bg"><div class="freq-bar" style="width:${(c/maxFreq*100).toFixed(1)}%;background:var(--ball-3)"></div></div>
+      <div class="freq-cnt">${c}</div>
+    </div>`).join('')}</div>`;
+}
+
+function generateNumbers() {
+  const useHot = document.getElementById('optHot').checked;
+  const useCold = document.getElementById('optCold').checked;
+  const allowConsec = document.getElementById('optConsec').checked;
+  const sorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
+  const hotNums = sorted.slice(0, 15).map(e => Number(e[0]));
+  const coldNums = sorted.slice(-15).map(e => Number(e[0]));
+  const results = [];
+  for (let s = 0; s < setCount; s++) {
+    let nums = new Set(), attempts = 0;
+    while (nums.size < 6 && attempts < 500) {
+      attempts++;
+      let n; const r = Math.random();
+      if (useHot && useCold) {
+        if (r < 0.4) n = hotNums[Math.floor(Math.random() * hotNums.length)];
+        else if (r < 0.6) n = coldNums[Math.floor(Math.random() * coldNums.length)];
+        else n = Math.floor(Math.random() * 45) + 1;
+      } else if (useHot) {
+        n = r < 0.5 ? hotNums[Math.floor(Math.random() * hotNums.length)] : Math.floor(Math.random() * 45) + 1;
+      } else if (useCold) {
+        n = r < 0.5 ? coldNums[Math.floor(Math.random() * coldNums.length)] : Math.floor(Math.random() * 45) + 1;
+      } else {
+        n = Math.floor(Math.random() * 45) + 1;
+      }
+      if (!allowConsec && nums.size > 0) {
+        const arr = [...nums];
+        if (arr.some(x => Math.abs(x - n) === 1)) continue;
+      }
+      nums.add(n);
+    }
+    results.push([...nums].sort((a, b) => a - b));
+  }
+  renderResults(results);
+}
+
+function renderResults(sets) {
+  if (!document.getElementById('fadeInStyle')) {
+    const style = document.createElement('style');
+    style.id = 'fadeInStyle';
+    style.textContent = '@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}';
+    document.head.appendChild(style);
+  }
+  document.getElementById('results').innerHTML = sets.map((nums, i) => `
+    <div class="result-set" style="animation:fadeIn .3s ${i * .08}s both">
+      <div class="set-label">세트 ${String.fromCharCode(65 + i)}</div>
+      <div class="balls">${nums.map(n => makeBall(n, true)).join('')}</div>
+    </div>`).join('');
+}
+
+function generatePension() {
+  const groups = ['1','2','3','4','5'];
+  const sets = [];
+  for (let i = 0; i < 5; i++) {
+    const group = groups[Math.floor(Math.random() * groups.length)];
+    let nums = '';
+    for (let j = 0; j < 6; j++) nums += Math.floor(Math.random() * 10);
+    sets.push({ group, nums });
+  }
+  document.getElementById('pensionResults').innerHTML = sets.map((s, i) => `
+    <div class="result-set" style="animation:fadeIn .3s ${i * .08}s both">
+      <div class="set-label">세트 ${i + 1}</div>
+      <div class="pension-group">${s.group}조 ${s.nums.split('').join(' ')}</div>
+    </div>`).join('');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  ['generate', 'stats', 'pension'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+  });
+}
+
+function adjustSets(delta) {
+  setCount = Math.max(1, Math.min(10, setCount + delta));
+  document.getElementById('setCount').textContent = setCount;
+}
+
+init();
+</script>
+</body>
+</html>

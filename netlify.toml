@@ -1,0 +1,8 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/lotto"
+  to = "/.netlify/functions/lotto"
+  status = 200
