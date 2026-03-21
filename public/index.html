@@ -178,7 +178,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 /* Pension: prize table */
 .prize-table{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.72rem}
 .prize-table th{text-align:left;padding:.35rem .4rem;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)}
-.prize-table td{padding:.35rem .4rem;border-bottom:1px solid rgba(42,48,80,.4)}
+.prize-table td{padding:.35rem .4rem;border-bottom:1px solid var(--border)}
 .prize-table tr:last-child td{border:none}
 .prize-rank{font-family:'Outfit';font-weight:700;color:var(--pension-accent2)}
 .prize-amount{font-family:'Outfit';font-weight:600;color:var(--gold)}
@@ -341,64 +341,122 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 
   <!-- 연금복권 720+ 섹션 -->
   <div id="section-pension" class="hidden">
-    <div class="card pension-card">
-      <div class="card-label">당첨 구조</div>
-      <table class="prize-table">
-        <tr><th>등수</th><th>당첨금</th><th>조건</th></tr>
-        <tr><td><span class="prize-rank">1등</span></td><td><span class="prize-amount">월 700만 x 20년</span></td><td class="prize-condition">조 + 6자리 모두 일치</td></tr>
-        <tr><td><span class="prize-rank">2등</span></td><td><span class="prize-amount">월 100만 x 10년</span></td><td class="prize-condition">6자리 모두 일치 (조 다름)</td></tr>
-        <tr><td><span class="prize-rank">3등</span></td><td><span class="prize-amount">100만원</span></td><td class="prize-condition">앞/뒤 5자리 일치</td></tr>
-        <tr><td><span class="prize-rank">4등</span></td><td><span class="prize-amount">10만원</span></td><td class="prize-condition">앞/뒤 4자리 일치</td></tr>
-        <tr><td><span class="prize-rank">5등</span></td><td><span class="prize-amount">5만원</span></td><td class="prize-condition">앞/뒤 3자리 일치</td></tr>
-        <tr><td><span class="prize-rank">6등</span></td><td><span class="prize-amount">5천원</span></td><td class="prize-condition">앞/뒤 2자리 일치</td></tr>
-        <tr><td><span class="prize-rank">7등</span></td><td><span class="prize-amount">1천원</span></td><td class="prize-condition">끝 1자리 일치</td></tr>
-      </table>
+    <div class="sub-tabs">
+      <div class="sub-tab active" data-psub="pension-gen" onclick="switchPensionSub('pension-gen')">번호 생성</div>
+      <div class="sub-tab" data-psub="pension-info" onclick="switchPensionSub('pension-info')">당첨 분석</div>
+      <div class="sub-tab" data-psub="pension-history" onclick="switchPensionSub('pension-history')">히스토리</div>
     </div>
 
-    <div class="card pension-card">
-      <div class="card-label">생성 옵션</div>
-      <div class="option-row">
-        <span class="option-label">생성 세트 수</span>
-        <div class="stepper pension-stepper">
-          <button onclick="adjustSets('pension',-1)">&#8722;</button>
-          <span id="pensionSetCount">5</span>
-          <button onclick="adjustSets('pension',1)">+</button>
+    <div id="sub-pension-gen">
+      <div class="card pension-card">
+        <div class="card-label">생성 옵션</div>
+        <div class="option-row">
+          <span class="option-label">생성 세트 수</span>
+          <div class="stepper pension-stepper">
+            <button onclick="adjustSets('pension',-1)">&#8722;</button>
+            <span id="pensionSetCount">5</span>
+            <button onclick="adjustSets('pension',1)">+</button>
+          </div>
+        </div>
+        <div class="option-row" style="flex-wrap:wrap;gap:.4rem">
+          <span class="option-label" style="width:100%">조 번호 선택</span>
+          <div class="group-selector" id="groupSelector">
+            <div class="group-chip active" data-group="1" onclick="toggleGroup(1)">1조</div>
+            <div class="group-chip active" data-group="2" onclick="toggleGroup(2)">2조</div>
+            <div class="group-chip active" data-group="3" onclick="toggleGroup(3)">3조</div>
+            <div class="group-chip active" data-group="4" onclick="toggleGroup(4)">4조</div>
+            <div class="group-chip active" data-group="5" onclick="toggleGroup(5)">5조</div>
+          </div>
         </div>
       </div>
-      <div class="option-row" style="flex-wrap:wrap;gap:.4rem">
-        <span class="option-label" style="width:100%">조 번호 선택</span>
-        <div class="group-selector" id="groupSelector">
-          <div class="group-chip active" data-group="1" onclick="toggleGroup(1)">1조</div>
-          <div class="group-chip active" data-group="2" onclick="toggleGroup(2)">2조</div>
-          <div class="group-chip active" data-group="3" onclick="toggleGroup(3)">3조</div>
-          <div class="group-chip active" data-group="4" onclick="toggleGroup(4)">4조</div>
-          <div class="group-chip active" data-group="5" onclick="toggleGroup(5)">5조</div>
+
+      <div class="card pension-card">
+        <div class="card-label">자릿수 고정 (빈칸 = 랜덤)</div>
+        <div class="digit-fix">
+          <input class="digit-slot" id="pDigit1" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit2')">
+          <input class="digit-slot" id="pDigit2" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit3')">
+          <input class="digit-slot" id="pDigit3" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit4')">
+          <input class="digit-slot" id="pDigit4" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit5')">
+          <input class="digit-slot" id="pDigit5" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit6')">
+          <input class="digit-slot" id="pDigit6" maxlength="1" placeholder="?" oninput="onDigitInput(this, null)">
+        </div>
+        <div class="digit-fix-hint">원하는 자리에 0~9 숫자를 입력하면 고정됩니다</div>
+      </div>
+
+      <button class="gen-btn pension-btn" onclick="generatePension()">연금복권 번호 생성</button>
+      <div id="pensionResults"></div>
+    </div>
+
+    <div id="sub-pension-info" class="hidden">
+      <div class="card pension-card">
+        <div class="card-label">당첨 구조</div>
+        <table class="prize-table">
+          <tr><th>등수</th><th>당첨금</th><th>조건</th><th>확률</th></tr>
+          <tr><td><span class="prize-rank">1등</span></td><td><span class="prize-amount">월 700만 x 20년</span></td><td class="prize-condition">조+6자리 일치</td><td class="prize-condition">1/5,000,000</td></tr>
+          <tr><td><span class="prize-rank">2등</span></td><td><span class="prize-amount">월 100만 x 10년</span></td><td class="prize-condition">6자리 일치(조 다름)</td><td class="prize-condition">4/5,000,000</td></tr>
+          <tr><td><span class="prize-rank">3등</span></td><td><span class="prize-amount">100만원</span></td><td class="prize-condition">앞/뒤 5자리</td><td class="prize-condition">1/50,000</td></tr>
+          <tr><td><span class="prize-rank">4등</span></td><td><span class="prize-amount">10만원</span></td><td class="prize-condition">앞/뒤 4자리</td><td class="prize-condition">1/5,000</td></tr>
+          <tr><td><span class="prize-rank">5등</span></td><td><span class="prize-amount">5만원</span></td><td class="prize-condition">앞/뒤 3자리</td><td class="prize-condition">1/500</td></tr>
+          <tr><td><span class="prize-rank">6등</span></td><td><span class="prize-amount">5천원</span></td><td class="prize-condition">앞/뒤 2자리</td><td class="prize-condition">1/50</td></tr>
+          <tr><td><span class="prize-rank">7등</span></td><td><span class="prize-amount">1천원</span></td><td class="prize-condition">끝 1자리</td><td class="prize-condition">1/10</td></tr>
+        </table>
+      </div>
+
+      <div class="card pension-card">
+        <div class="card-label">기대값 시뮬레이터</div>
+        <div class="card-desc" style="margin-bottom:.6rem">한 달 구매 장수를 설정하면 연간 기대 당첨금을 계산합니다.</div>
+        <div class="option-row">
+          <span class="option-label">월 구매 장수</span>
+          <div class="stepper pension-stepper">
+            <button onclick="adjustSimCount(-1)">&#8722;</button>
+            <span id="simCount">10</span>
+            <button onclick="adjustSimCount(1)">+</button>
+          </div>
+        </div>
+        <div id="simResult" style="margin-top:.6rem"></div>
+      </div>
+
+      <div class="card pension-card">
+        <div class="card-label">등수별 당첨 기대 횟수 (연간)</div>
+        <div id="pensionExpChart"></div>
+      </div>
+
+      <div class="card pension-card">
+        <div class="card-label">로또 vs 연금복권 비교</div>
+        <table class="prize-table">
+          <tr><th></th><th>로또 6/45</th><th>연금복권 720+</th></tr>
+          <tr><td class="prize-condition">가격</td><td>1,000원</td><td>1,000원</td></tr>
+          <tr><td class="prize-condition">1등 금액</td><td><span class="prize-amount">약 20억 (일시금)</span></td><td><span class="prize-amount">16.8억 (월 700만)</span></td></tr>
+          <tr><td class="prize-condition">1등 확률</td><td>1/8,145,060</td><td>1/5,000,000</td></tr>
+          <tr><td class="prize-condition">최소 당첨</td><td>5등 5,000원</td><td>7등 1,000원</td></tr>
+          <tr><td class="prize-condition">최소 당첨 확률</td><td>1/45</td><td>1/10</td></tr>
+          <tr><td class="prize-condition">수령 방식</td><td>일시 수령</td><td>월 분할 수령</td></tr>
+          <tr><td class="prize-condition">세금</td><td>33% (3억 초과)</td><td>22% (월 수령액)</td></tr>
+          <tr><td class="prize-condition">추천 대상</td><td class="prize-condition">큰 금액 선호</td><td class="prize-condition">안정적 수입 선호</td></tr>
+        </table>
+      </div>
+
+      <div class="card pension-card">
+        <div class="card-label">연금복권 꿀팁</div>
+        <div class="card-desc" style="line-height:1.8">
+          &#10004; 7등(끝 1자리) 당첨 확률이 10%로 로또보다 소액 당첨이 쉬움<br>
+          &#10004; 1등 확률이 로또보다 약 1.6배 높음<br>
+          &#10004; 월 700만원 x 20년 = 세후 약 월 546만원 안정 수입<br>
+          &#10004; 2등도 월 100만원 x 10년으로 충분히 매력적<br>
+          &#10004; 조 번호 5개 중 하나만 맞으면 되므로 조 분산이 유리<br>
+          &#10004; 같은 번호 연속 구매보다 다양한 번호로 분산 추천
         </div>
       </div>
     </div>
 
-    <div class="card pension-card">
-      <div class="card-label">자릿수 고정 (빈칸 = 랜덤)</div>
-      <div class="digit-fix">
-        <input class="digit-slot" id="pDigit1" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit2')">
-        <input class="digit-slot" id="pDigit2" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit3')">
-        <input class="digit-slot" id="pDigit3" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit4')">
-        <input class="digit-slot" id="pDigit4" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit5')">
-        <input class="digit-slot" id="pDigit5" maxlength="1" placeholder="?" oninput="onDigitInput(this, 'pDigit6')">
-        <input class="digit-slot" id="pDigit6" maxlength="1" placeholder="?" oninput="onDigitInput(this, null)">
+    <div id="sub-pension-history" class="hidden">
+      <div class="card pension-card">
+        <div class="history-header">
+          <div class="card-label">생성 히스토리</div>
+          <button class="history-clear" onclick="clearHistory('pension')">전체 삭제</button>
+        </div>
+        <div id="pensionHistoryList"></div>
       </div>
-      <div class="digit-fix-hint">원하는 자리에 0~9 숫자를 입력하면 고정됩니다</div>
-    </div>
-
-    <button class="gen-btn pension-btn" onclick="generatePension()">연금복권 번호 생성</button>
-    <div id="pensionResults"></div>
-
-    <div class="card pension-card" style="margin-top:1rem">
-      <div class="history-header">
-        <div class="card-label">생성 히스토리</div>
-        <button class="history-clear" onclick="clearHistory('pension')">전체 삭제</button>
-      </div>
-      <div id="pensionHistoryList"></div>
     </div>
   </div>
 </div>
@@ -601,6 +659,67 @@ function generateLotto() {
     </div>`).join('');
 
   saveHistory('lotto', results);
+}
+
+// --- Pension sub tabs ---
+function switchPensionSub(sub) {
+  document.querySelectorAll('[data-psub]').forEach(t => t.classList.toggle('active', t.dataset.psub === sub));
+  ['pension-gen','pension-info','pension-history'].forEach(s => {
+    const el = document.getElementById('sub-' + s);
+    if (el) el.classList.toggle('hidden', s !== sub);
+  });
+  if (sub === 'pension-info') renderPensionSim();
+}
+
+// --- Pension simulator ---
+let simCount = 10;
+function adjustSimCount(delta) {
+  simCount = Math.max(1, Math.min(100, simCount + delta));
+  document.getElementById('simCount').textContent = simCount;
+  renderPensionSim();
+}
+
+function renderPensionSim() {
+  const monthly = simCount;
+  const yearly = monthly * 12;
+  const cost = yearly * 1000;
+  // 등수별 확률과 상금 (1회 기준 기대값)
+  const prizes = [
+    { rank: '1등', prob: 1/5000000, amount: 168000000, label: '16.8억(총액)' },
+    { rank: '2등', prob: 4/5000000, amount: 12000000, label: '1.2억(총액)' },
+    { rank: '3등', prob: 2/500000, amount: 1000000, label: '100만원' },
+    { rank: '4등', prob: 2/50000, amount: 100000, label: '10만원' },
+    { rank: '5등', prob: 2/5000, amount: 50000, label: '5만원' },
+    { rank: '6등', prob: 2/500, amount: 5000, label: '5천원' },
+    { rank: '7등', prob: 1/10, amount: 1000, label: '1천원' },
+  ];
+  let totalExpected = 0;
+  const rows = prizes.map(p => {
+    const expTimes = yearly * p.prob;
+    const expAmount = expTimes * p.amount;
+    totalExpected += expAmount;
+    return { ...p, expTimes, expAmount };
+  });
+  const roi = ((totalExpected / cost) * 100).toFixed(1);
+
+  document.getElementById('simResult').innerHTML = `
+    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat-box"><div class="val" style="color:var(--pension-accent2)">${yearly}장</div><div class="lbl">연간 구매</div></div>
+      <div class="stat-box"><div class="val" style="color:var(--pension-accent2)">${(cost/10000).toFixed(0)}만원</div><div class="lbl">연간 비용</div></div>
+      <div class="stat-box"><div class="val" style="color:var(--pension-accent2)">${totalExpected >= 10000 ? (totalExpected/10000).toFixed(1) + '만' : Math.round(totalExpected)}원</div><div class="lbl">기대 당첨금</div></div>
+      <div class="stat-box"><div class="val" style="color:${parseFloat(roi) >= 100 ? 'var(--ball-5)' : 'var(--ball-3)'}">${roi}%</div><div class="lbl">기대 수익률</div></div>
+    </div>`;
+
+  const maxExp = Math.max(...rows.map(r => r.expTimes));
+  document.getElementById('pensionExpChart').innerHTML = `<div class="freq-chart">${rows.map(r => {
+    const barW = maxExp > 0 ? (r.expTimes / maxExp * 100) : 0;
+    const timesStr = r.expTimes >= 1 ? r.expTimes.toFixed(1) + '회' : r.expTimes >= 0.01 ? r.expTimes.toFixed(2) + '회' : r.expTimes.toExponential(1);
+    return `<div class="freq-row">
+      <div style="min-width:28px;font-size:.7rem;font-weight:600;color:var(--pension-accent2)">${r.rank}</div>
+      <div class="freq-bar-bg"><div class="freq-bar" style="width:${barW.toFixed(1)}%;background:var(--pension-accent)"></div></div>
+      <div class="freq-cnt" style="width:50px">${timesStr}</div>
+    </div>`;
+  }).join('')}</div>`;
 }
 
 // --- Pension: group selector ---
