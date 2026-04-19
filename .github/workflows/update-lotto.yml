@@ -1,9 +1,11 @@
-name: 로또 당첨번호 자동 업데이트
+name: 복권 당첨번호 자동 업데이트
 
 on:
   schedule:
-    # 매주 토요일 12:30 UTC = 21:30 KST (추첨 후 약 45분)
+    # 매주 토요일 12:30 UTC = 21:30 KST (로또 추첨 후 약 45분)
     - cron: '30 12 * * 6'
+    # 매주 목요일 13:00 UTC = 22:00 KST (연금복권 추첨 후 약 1시간)
+    - cron: '0 13 * * 4'
   workflow_dispatch: # 수동 실행 버튼
 
 jobs:
@@ -28,15 +30,18 @@ jobs:
       - name: Playwright 브라우저 설치
         run: npx playwright install chromium --with-deps
 
-      - name: 로또 데이터 업데이트
+      - name: 로또 6/45 데이터 업데이트
         run: node fetch-lotto-playwright.js
+
+      - name: 연금복권 720+ 데이터 업데이트
+        run: node fetch-pension-playwright.js
 
       - name: 변경사항 커밋 & 푸시
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git diff --quiet public/data/lotto.json || (
-            git add public/data/lotto.json &&
-            git commit -m "data: 로또 당첨번호 자동 업데이트 ($(date +'%Y-%m-%d'))" &&
+          git diff --quiet public/data/lotto.json public/data/pension.json || (
+            git add public/data/lotto.json public/data/pension.json &&
+            git commit -m "data: 복권 당첨번호 자동 업데이트 ($(date +'%Y-%m-%d'))" &&
             git push
           )

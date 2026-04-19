@@ -556,64 +556,33 @@ function getCurrentRound() {
 }
 
 // --- 연금복권 당첨번호 ---
-const PENSION_RESULT_CACHE_KEY = 'pension_latest_result_v1';
-
-function getCurrentPensionRound() {
-  // 연금복권 720+ 첫 추첨: 2011-09-01 (목요일) 오후 8시
-  const start = new Date('2011-09-01T20:00:00+09:00');
-  return Math.max(1, Math.floor((Date.now() - start) / (7 * 24 * 60 * 60 * 1000)) + 1);
-}
-
 async function loadPensionResult() {
   const el = document.getElementById('pensionLastDraw');
   if (!el) return;
 
-  // 캐시 확인
-  let cached = null;
-  try { cached = JSON.parse(localStorage.getItem(PENSION_RESULT_CACHE_KEY)); } catch {}
-  const currentRound = getCurrentPensionRound();
-
-  if (cached && cached.drwNo >= currentRound - 1) {
-    renderPensionLastDraw(cached);
-    return;
-  }
-
-  // 최신 회차부터 최대 3회 시도 (아직 결과 미발표 대비)
-  for (let r = currentRound; r >= currentRound - 2; r--) {
-    try {
-      const res = await fetch(`/api/lotto?action=fetchPension&round=${r}`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data && data.returnValue === 'success') {
-        localStorage.setItem(PENSION_RESULT_CACHE_KEY, JSON.stringify(data));
-        renderPensionLastDraw(data);
-        return;
-      }
-    } catch {}
-  }
-
-  // fetch 실패 시 캐시 표시 또는 안내
-  if (cached) {
-    renderPensionLastDraw(cached);
-  } else {
-    el.innerHTML = '<div style="color:var(--text3);font-size:.8rem;padding:.2rem 0">당첨번호를 불러올 수 없습니다<br><span style="font-size:.7rem">(한국 네트워크에서 자동 로딩)</span></div>';
+  try {
+    const res = await fetch('/data/pension.json');
+    if (!res.ok) throw new Error('fetch failed');
+    const all = await res.json();
+    // pension.json은 내림차순 정렬 (최신이 첫 번째)
+    const latest = all[0];
+    if (latest) renderPensionLastDraw(latest);
+  } catch {
+    el.innerHTML = '<div style="color:var(--text3);font-size:.8rem;padding:.2rem 0">당첨번호를 불러올 수 없습니다</div>';
   }
 }
 
 function renderPensionLastDraw(data) {
   const el = document.getElementById('pensionLastDraw');
   if (!el || !data) return;
-  // API 필드명 대응 (실제 응답 확인 전 다중 후보)
-  const num = data.firstWinatNum || data.pensionNum || data.num1 || '';
-  const group = data.firstWinat || data.pensionAt || data.pnsAt || '';
-  const numDisplay = num
-    ? num.split('').map(d => `<div class="ticket-digit">${d}</div>`).join('')
+  const numDisplay = data.nums
+    ? data.nums.split('').map(d => `<div class="ticket-digit">${d}</div>`).join('')
     : '<span style="color:var(--text3)">-</span>';
 
   el.innerHTML = `
     <div class="card-title">${data.drwNo}회 (${data.drwNoDate})</div>
     <div style="margin-top:.5rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
-      <div class="ticket-group">${group || '?조'}</div>
+      <div class="ticket-group">${data.group}조</div>
       <span class="ticket-divider">-</span>
       <div class="ticket-digits">${numDisplay}</div>
     </div>
