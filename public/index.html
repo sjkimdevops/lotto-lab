@@ -406,6 +406,10 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
 
     <div id="sub-pension-gen">
       <div class="card pension-card">
+        <div class="card-label">최근 당첨번호</div>
+        <div id="pensionLastDraw"><div class="skeleton" style="width:100%;height:60px"></div></div>
+      </div>
+      <div class="card pension-card">
         <div class="card-label">생성 옵션</div>
         <div class="option-row">
           <span class="option-label">생성 세트 수</span>
@@ -418,11 +422,12 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:45vh;backgrou
         <div class="option-row" style="flex-wrap:wrap;gap:.4rem">
           <span class="option-label" style="width:100%">조 번호 선택</span>
           <div class="group-selector" id="groupSelector">
-            <div class="group-chip active" data-group="1" onclick="toggleGroup(1)">1조</div>
-            <div class="group-chip active" data-group="2" onclick="toggleGroup(2)">2조</div>
-            <div class="group-chip active" data-group="3" onclick="toggleGroup(3)">3조</div>
-            <div class="group-chip active" data-group="4" onclick="toggleGroup(4)">4조</div>
-            <div class="group-chip active" data-group="5" onclick="toggleGroup(5)">5조</div>
+            <div class="group-chip active" data-group="all" onclick="selectGroup('all')">모든 조</div>
+            <div class="group-chip" data-group="1" onclick="selectGroup(1)">1조</div>
+            <div class="group-chip" data-group="2" onclick="selectGroup(2)">2조</div>
+            <div class="group-chip" data-group="3" onclick="selectGroup(3)">3조</div>
+            <div class="group-chip" data-group="4" onclick="selectGroup(4)">4조</div>
+            <div class="group-chip" data-group="5" onclick="selectGroup(5)">5조</div>
           </div>
         </div>
       </div>
@@ -526,12 +531,132 @@ let lottoSetCount = 5, pensionSetCount = 5;
 let includeNums = new Set(), excludeNums = new Set();
 const LEVEL_LABELS = ['OFF', '약간', '보통', '강하게', '매우강', '최대'];
 
+// --- Round cache (localStorage) ---
+const ROUND_CACHE_KEY = 'lotto_rounds_cache_v1';
+
+function getCachedRounds() {
+  try { return JSON.parse(localStorage.getItem(ROUND_CACHE_KEY) || '[]'); } catch { return []; }
+}
+
+function saveCachedRounds(rounds) {
+  try { localStorage.setItem(ROUND_CACHE_KEY, JSON.stringify(rounds)); } catch {}
+}
+
+function mergeCachedRound(entry) {
+  const cached = getCachedRounds();
+  if (!cached.find(r => r.drwNo === entry.drwNo)) {
+    cached.push(entry);
+    saveCachedRounds(cached);
+  }
+}
+
+function getCurrentRound() {
+  const start = new Date('2002-12-07T18:00:00+09:00');
+  return Math.floor((Date.now() - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
+}
+
+// --- 연금복권 당첨번호 ---
+const PENSION_RESULT_CACHE_KEY = 'pension_latest_result_v1';
+
+function getCurrentPensionRound() {
+  // 연금복권 720+ 첫 추첨: 2011-09-01 (목요일) 오후 8시
+  const start = new Date('2011-09-01T20:00:00+09:00');
+  return Math.max(1, Math.floor((Date.now() - start) / (7 * 24 * 60 * 60 * 1000)) + 1);
+}
+
+async function loadPensionResult() {
+  const el = document.getElementById('pensionLastDraw');
+  if (!el) return;
+
+  // 캐시 확인
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(PENSION_RESULT_CACHE_KEY)); } catch {}
+  const currentRound = getCurrentPensionRound();
+
+  if (cached && cached.drwNo >= currentRound - 1) {
+    renderPensionLastDraw(cached);
+    return;
+  }
+
+  // 최신 회차부터 최대 3회 시도 (아직 결과 미발표 대비)
+  for (let r = currentRound; r >= currentRound - 2; r--) {
+    try {
+      const res = await fetch(`/api/lotto?action=fetchPension&round=${r}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data && data.returnValue === 'success') {
+        localStorage.setItem(PENSION_RESULT_CACHE_KEY, JSON.stringify(data));
+        renderPensionLastDraw(data);
+        return;
+      }
+    } catch {}
+  }
+
+  // fetch 실패 시 캐시 표시 또는 안내
+  if (cached) {
+    renderPensionLastDraw(cached);
+  } else {
+    el.innerHTML = '<div style="color:var(--text3);font-size:.8rem;padding:.2rem 0">당첨번호를 불러올 수 없습니다<br><span style="font-size:.7rem">(한국 네트워크에서 자동 로딩)</span></div>';
+  }
+}
+
+function renderPensionLastDraw(data) {
+  const el = document.getElementById('pensionLastDraw');
+  if (!el || !data) return;
+  // API 필드명 대응 (실제 응답 확인 전 다중 후보)
+  const num = data.firstWinatNum || data.pensionNum || data.num1 || '';
+  const group = data.firstWinat || data.pensionAt || data.pnsAt || '';
+  const numDisplay = num
+    ? num.split('').map(d => `<div class="ticket-digit">${d}</div>`).join('')
+    : '<span style="color:var(--text3)">-</span>';
+
+  el.innerHTML = `
+    <div class="card-title">${data.drwNo}회 (${data.drwNoDate})</div>
+    <div style="margin-top:.5rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+      <div class="ticket-group">${group || '?조'}</div>
+      <span class="ticket-divider">-</span>
+      <div class="ticket-digits">${numDisplay}</div>
+    </div>
+    <div style="font-size:.7rem;color:var(--text3);margin-top:.45rem">2등: 나머지 4개 조 동일 번호</div>`;
+}
+
+async function fetchRound(round) {
+  try {
+    const res = await fetch(`/api/lotto?action=fetch&round=${round}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && data.returnValue === 'success' ? data : null;
+  } catch { return null; }
+}
+
+async function fetchMissingRounds(from, to) {
+  const missing = [];
+  for (let r = from; r <= to; r++) missing.push(r);
+  if (!missing.length) return;
+
+  const BATCH = 5;
+  const fetched = [];
+  for (let i = 0; i < missing.length; i += BATCH) {
+    setStatus(`최신 데이터 로딩 중... (${Math.min(i + BATCH, missing.length)}/${missing.length})`, 'loading');
+    const batch = missing.slice(i, i + BATCH);
+    const results = await Promise.all(batch.map(fetchRound));
+    results.forEach(d => { if (d) { fetched.push(d); mergeCachedRound(d); } });
+  }
+
+  if (fetched.length) {
+    fullData = [...fetched, ...fullData];
+    fullData.sort((a, b) => b.drwNo - a.drwNo);
+    latestRound = fullData[0].drwNo;
+  }
+}
+
 // --- Init ---
 async function init() {
   initNumGrid();
   renderHistory('lotto');
   renderHistory('pension');
   await loadData();
+  loadPensionResult();
 }
 
 async function loadData() {
@@ -539,8 +664,24 @@ async function loadData() {
   try {
     const res = await fetch('/data/lotto.json');
     fullData = await res.json();
+
+    // 캐시된 최신 회차 병합
+    const cached = getCachedRounds();
+    if (cached.length) {
+      const existingNos = new Set(fullData.map(d => d.drwNo));
+      cached.forEach(d => { if (!existingNos.has(d.drwNo)) fullData.push(d); });
+    }
+
     fullData.sort((a, b) => b.drwNo - a.drwNo);
     latestRound = fullData[0].drwNo;
+
+    // 최신 회차 자동 fetch
+    const currentRound = getCurrentRound();
+    if (latestRound < currentRound) {
+      applyRange(); // 일단 기존 데이터로 먼저 표시
+      await fetchMissingRounds(latestRound + 1, currentRound);
+    }
+
     applyRange();
   } catch (e) {
     setStatus('데이터 로딩 실패', 'error');
@@ -780,17 +921,13 @@ function renderPensionSim() {
 }
 
 // --- Pension: group selector ---
-let selectedGroups = new Set([1,2,3,4,5]);
+let selectedGroup = 'all'; // 'all' | 1~5
 
-function toggleGroup(g) {
-  if (selectedGroups.has(g)) {
-    if (selectedGroups.size <= 1) return;
-    selectedGroups.delete(g);
-  } else {
-    selectedGroups.add(g);
-  }
+function selectGroup(g) {
+  selectedGroup = g;
   document.querySelectorAll('.group-chip').forEach(el => {
-    el.classList.toggle('active', selectedGroups.has(parseInt(el.dataset.group)));
+    const val = el.dataset.group === 'all' ? 'all' : parseInt(el.dataset.group);
+    el.classList.toggle('active', val === selectedGroup);
   });
 }
 
@@ -811,16 +948,27 @@ function getFixedDigits() {
 
 // --- Pension generation ---
 function generatePension() {
-  const groups = [...selectedGroups];
   const fixedDigits = getFixedDigits();
   const sets = [];
-  for (let i = 0; i < pensionSetCount; i++) {
-    const group = String(groups[Math.floor(Math.random() * groups.length)]);
+
+  if (selectedGroup === 'all') {
+    // 숫자 1세트 생성 후 1~5조 모두 적용 (항상 5세트)
     let nums = '';
     for (let j = 0; j < 6; j++) {
       nums += fixedDigits[j] !== null ? fixedDigits[j] : Math.floor(Math.random() * 10);
     }
-    sets.push({ group, nums, fixedDigits: [...fixedDigits] });
+    for (let g = 1; g <= 5; g++) {
+      sets.push({ group: String(g), nums, fixedDigits: [...fixedDigits] });
+    }
+  } else {
+    // 선택된 조로 pensionSetCount만큼 생성
+    for (let i = 0; i < pensionSetCount; i++) {
+      let nums = '';
+      for (let j = 0; j < 6; j++) {
+        nums += fixedDigits[j] !== null ? fixedDigits[j] : Math.floor(Math.random() * 10);
+      }
+      sets.push({ group: String(selectedGroup), nums, fixedDigits: [...fixedDigits] });
+    }
   }
   document.getElementById('pensionResults').innerHTML = sets.map((s, i) => {
     const digitHtml = s.nums.split('').map((d, j) =>
