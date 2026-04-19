@@ -531,29 +531,6 @@ let lottoSetCount = 5, pensionSetCount = 5;
 let includeNums = new Set(), excludeNums = new Set();
 const LEVEL_LABELS = ['OFF', '약간', '보통', '강하게', '매우강', '최대'];
 
-// --- Round cache (localStorage) ---
-const ROUND_CACHE_KEY = 'lotto_rounds_cache_v1';
-
-function getCachedRounds() {
-  try { return JSON.parse(localStorage.getItem(ROUND_CACHE_KEY) || '[]'); } catch { return []; }
-}
-
-function saveCachedRounds(rounds) {
-  try { localStorage.setItem(ROUND_CACHE_KEY, JSON.stringify(rounds)); } catch {}
-}
-
-function mergeCachedRound(entry) {
-  const cached = getCachedRounds();
-  if (!cached.find(r => r.drwNo === entry.drwNo)) {
-    cached.push(entry);
-    saveCachedRounds(cached);
-  }
-}
-
-function getCurrentRound() {
-  const start = new Date('2002-12-07T18:00:00+09:00');
-  return Math.floor((Date.now() - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
-}
 
 // --- 연금복권 당첨번호 ---
 async function loadPensionResult() {
@@ -589,35 +566,6 @@ function renderPensionLastDraw(data) {
     <div style="font-size:.7rem;color:var(--text3);margin-top:.45rem">2등: 나머지 4개 조 동일 번호</div>`;
 }
 
-async function fetchRound(round) {
-  try {
-    const res = await fetch(`/api/lotto?action=fetch&round=${round}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data && data.returnValue === 'success' ? data : null;
-  } catch { return null; }
-}
-
-async function fetchMissingRounds(from, to) {
-  const missing = [];
-  for (let r = from; r <= to; r++) missing.push(r);
-  if (!missing.length) return;
-
-  const BATCH = 5;
-  const fetched = [];
-  for (let i = 0; i < missing.length; i += BATCH) {
-    setStatus(`최신 데이터 로딩 중... (${Math.min(i + BATCH, missing.length)}/${missing.length})`, 'loading');
-    const batch = missing.slice(i, i + BATCH);
-    const results = await Promise.all(batch.map(fetchRound));
-    results.forEach(d => { if (d) { fetched.push(d); mergeCachedRound(d); } });
-  }
-
-  if (fetched.length) {
-    fullData = [...fetched, ...fullData];
-    fullData.sort((a, b) => b.drwNo - a.drwNo);
-    latestRound = fullData[0].drwNo;
-  }
-}
 
 // --- Init ---
 async function init() {
@@ -633,24 +581,8 @@ async function loadData() {
   try {
     const res = await fetch('/data/lotto.json');
     fullData = await res.json();
-
-    // 캐시된 최신 회차 병합
-    const cached = getCachedRounds();
-    if (cached.length) {
-      const existingNos = new Set(fullData.map(d => d.drwNo));
-      cached.forEach(d => { if (!existingNos.has(d.drwNo)) fullData.push(d); });
-    }
-
     fullData.sort((a, b) => b.drwNo - a.drwNo);
     latestRound = fullData[0].drwNo;
-
-    // 최신 회차 자동 fetch
-    const currentRound = getCurrentRound();
-    if (latestRound < currentRound) {
-      applyRange(); // 일단 기존 데이터로 먼저 표시
-      await fetchMissingRounds(latestRound + 1, currentRound);
-    }
-
     applyRange();
   } catch (e) {
     setStatus('데이터 로딩 실패', 'error');
