@@ -1,0 +1,13 @@
+{
+  "appId": "com.sjkim.lotto",
+  "appName": "로또 도우미",
+  "webDir": "public",
+  "server": {
+    "url": "https://sjkimdevops.github.io/lotto-lab/",
+    "cleartext": false
+  },
+  "ios": {
+    "backgroundColor": "#1a1a2e",
+    "contentInset": "automatic"
+  }
+}

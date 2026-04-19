@@ -538,7 +538,7 @@ async function loadPensionResult() {
   if (!el) return;
 
   try {
-    const res = await fetch('/data/pension.json');
+    const res = await fetch('data/pension.json');
     if (!res.ok) throw new Error('fetch failed');
     const all = await res.json();
     // pension.json은 내림차순 정렬 (최신이 첫 번째)
@@ -579,7 +579,7 @@ async function init() {
 async function loadData() {
   setStatus('데이터 불러오는 중...', 'loading');
   try {
-    const res = await fetch('/data/lotto.json');
+    const res = await fetch('data/lotto.json');
     fullData = await res.json();
     fullData.sort((a, b) => b.drwNo - a.drwNo);
     latestRound = fullData[0].drwNo;
