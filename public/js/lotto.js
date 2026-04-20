@@ -273,10 +273,6 @@ function renderSetItem(s) {
     rightContent = `<span class="set-excluded">— 제외 —</span>`;
   }
 
-  const editRow = (isManual && s.manualNums && s.manualNums.every(v => { const n = parseInt(v); return v !== '' && n >= 1 && n <= 45; }))
-    ? `<div class="set-edit-row"><button class="btn-edit-nums" onclick="startManualEdit(${s.id})">✏️ 번호 수정</button></div>`
-    : '';
-
   return `<div class="set-item ${stateClass}" id="set-${s.id}">
     <div class="set-row">
       <span class="set-num">${s.id}세트</span>
@@ -286,7 +282,6 @@ function renderSetItem(s) {
       </div>
       ${rightContent}
     </div>
-    ${editRow}
   </div>`;
 }
 
@@ -372,36 +367,6 @@ function moveManualFocus(setId, idx, dir) {
   }
 }
 
-function checkManualComplete(setId) {
-  const s = sets[setId - 1];
-  if (!s.manualNums) return;
-  const allFilled = s.manualNums.every(v => {
-    const n = parseInt(v);
-    return v !== '' && n >= 1 && n <= 45;
-  });
-  const editRow = document.querySelector(`#set-${setId} .set-edit-row`);
-  const setEl = document.getElementById(`set-${setId}`);
-  if (allFilled) {
-    if (!editRow && setEl) {
-      const row = document.createElement('div');
-      row.className = 'set-edit-row';
-      row.innerHTML = `<button class="btn-edit-nums" onclick="startManualEdit(${setId})">✏️ 번호 수정</button>`;
-      setEl.appendChild(row);
-    }
-  } else {
-    editRow?.remove();
-  }
-}
-
-function startManualEdit(setId) {
-  const s = sets[setId - 1];
-  const editRow = document.querySelector(`#set-${setId} .set-edit-row`);
-  editRow?.remove();
-  const firstEmpty = s.manualNums?.findIndex(v => !v) ?? 0;
-  const focusIdx = firstEmpty >= 0 ? firstEmpty : 0;
-  document.getElementById(`manual-${setId}-${focusIdx}`)?.focus();
-}
-
 // --- 자동 번호 생성 실행 ---
 function generateLottoSets() {
   const autoSets = sets.filter(s => s.mode === 'auto');
@@ -409,14 +374,42 @@ function generateLottoSets() {
     alert('자동 세트가 없습니다. 최소 1개 세트를 자동으로 설정해주세요.');
     return;
   }
-  autoSets.forEach(s => {
-    s.autoNums = generateNums();
-  });
+  autoSets.forEach(s => { s.autoNums = generateNums(); });
   const el = document.getElementById('setList');
   if (el) el.innerHTML = sets.map(s => renderSetItem(s)).join('');
-  const generated = sets.filter(s => s.mode === 'auto' && s.autoNums);
-  saveHistoryLocal('lotto', generated.map(s => s.autoNums));
+}
+
+// --- 구매 확정 ---
+function confirmLottoRound() {
+  const activeSets = sets.filter(s => s.mode !== null);
+  if (activeSets.length === 0) {
+    alert('최소 1개 이상의 세트를 선택해주세요.');
+    return;
+  }
+  for (const s of activeSets) {
+    if (s.mode === 'auto') {
+      if (!s.autoNums || s.autoNums.length < 6) {
+        alert('숫자가 입력되지 않은 세트가 있습니다.');
+        return;
+      }
+    } else if (s.mode === 'manual') {
+      if (!s.manualNums) { alert('숫자가 입력되지 않은 세트가 있습니다.'); return; }
+      const invalid = s.manualNums.some(v => {
+        const n = parseInt(v);
+        return !v || isNaN(n) || n < 1 || n > 45;
+      });
+      if (invalid) { alert('숫자가 입력되지 않은 세트가 있습니다.'); return; }
+    }
+  }
+  const data = activeSets.map(s => s.mode === 'auto' ? s.autoNums : s.manualNums.map(Number));
+  saveHistoryLocal('lotto', data);
   renderHistoryList('lotto');
+  // 라운드 초기화
+  sets.forEach(s => { s.mode = 'auto'; s.autoNums = null; s.manualNums = null; });
+  const el = document.getElementById('setList');
+  if (el) el.innerHTML = sets.map(s => renderSetItem(s)).join('');
+  const toast = document.getElementById('copyToast');
+  if (toast) { toast.textContent = '구매가 확정되었습니다 ✓'; toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.textContent = '번호가 복사되었습니다'; }, 1800); }
 }
 
 // --- 로또 탭 렌더링 ---
@@ -468,7 +461,7 @@ function renderLottoGenTab() {
         </div>
         <div class="option-row">
           <span class="option-label">연속번호 허용</span>
-          <label class="toggle"><input type="checkbox" id="optConsec"><span class="slider"></span></label>
+          <label class="toggle"><input type="checkbox" id="optConsec" checked><span class="slider"></span></label>
         </div>
         <div class="num-picker">
           <div class="num-picker-label">
@@ -481,9 +474,10 @@ function renderLottoGenTab() {
       </div>
     </div>
 
-    <button class="btn-primary" id="genBtn" onclick="generateLottoSets()" disabled>
-      ✨ 자동 번호 생성하기
-    </button>
+    <div class="btn-row">
+      <button class="btn-primary" id="genBtn" onclick="generateLottoSets()" disabled>✨ 자동 생성</button>
+      <button class="btn-primary btn-confirm" id="confirmBtn" onclick="confirmLottoRound()" disabled>🛒 구매 확정</button>
+    </div>
   `;
   initNumGrid();
   initSetList();
@@ -544,4 +538,5 @@ async function initLotto() {
   renderLottoStatsTab();
   await loadData();
   document.getElementById('genBtn')?.removeAttribute('disabled');
+  document.getElementById('confirmBtn')?.removeAttribute('disabled');
 }

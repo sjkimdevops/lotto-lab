@@ -1,20 +1,29 @@
 // public/js/pension.js
 'use strict';
 
-let pensionSetCount = 5;
 let selectedGroup = 'all';
 let simCount = 10;
 
 const PENSION_PRIZES = [
-  { rank: '1등', prob: 1/5000000, amount: 168000000, label: '16.8억(총액)' },
-  { rank: '2등', prob: 4/5000000, amount: 12000000, label: '1.2억(총액)' },
-  { rank: '3등', prob: 2/500000, amount: 1000000, label: '100만원' },
-  { rank: '4등', prob: 2/50000, amount: 100000, label: '10만원' },
-  { rank: '5등', prob: 2/5000, amount: 50000, label: '5만원' },
-  { rank: '6등', prob: 2/500, amount: 5000, label: '5천원' },
-  { rank: '7등', prob: 1/10, amount: 1000, label: '1천원' },
+  { rank: '1등', prob: 1/5000000, amount: 168000000 },
+  { rank: '2등', prob: 4/5000000, amount: 12000000 },
+  { rank: '3등', prob: 2/500000, amount: 1000000 },
+  { rank: '4등', prob: 2/50000, amount: 100000 },
+  { rank: '5등', prob: 2/5000, amount: 50000 },
+  { rank: '6등', prob: 2/500, amount: 5000 },
+  { rank: '7등', prob: 1/10, amount: 1000 },
 ];
 
+// 연금복권 세트 상태
+const pensionSets = Array.from({length: 5}, (_, i) => ({
+  id: i + 1,
+  mode: 'auto',       // 'auto' | 'manual' | null
+  autoResult: null,   // { group: '3', nums: '123456' }
+  manualGroup: '',    // '1'~'5'
+  manualNums: Array(6).fill(''),
+}));
+
+// --- 데이터 로드 ---
 async function loadPensionResult() {
   const el = document.getElementById('pensionLastDraw');
   if (!el) return;
@@ -43,6 +52,7 @@ function renderPensionLastDraw(data, el) {
     <div style="font-size:.68rem;color:var(--text3);margin-top:.4rem">2등: 나머지 4개 조 동일 번호</div>`;
 }
 
+// --- 조 선택 ---
 function selectGroup(g) {
   selectedGroup = g;
   document.querySelectorAll('.group-chip').forEach(el => {
@@ -51,6 +61,7 @@ function selectGroup(g) {
   });
 }
 
+// --- 자릿수 고정 입력 ---
 function onDigitInput(el, nextId) {
   el.value = el.value.replace(/[^0-9]/g, '').slice(0, 1);
   if (el.value && nextId !== 'null') document.getElementById(nextId)?.focus();
@@ -63,44 +74,201 @@ function getFixedDigits() {
   });
 }
 
-function generatePension() {
-  const fixedDigits = getFixedDigits();
-  const generatedSets = [];
-  if (selectedGroup === 'all') {
-    let nums = '';
-    for (let j = 0; j < 6; j++) {
-      nums += fixedDigits[j] !== null ? fixedDigits[j] : Math.floor(Math.random() * 10);
-    }
-    for (let g = 1; g <= 5; g++) generatedSets.push({ group: String(g), nums, fixedDigits: [...fixedDigits] });
+// --- 세트 렌더링 ---
+function initPensionSetList() {
+  const el = document.getElementById('pensionSetList');
+  if (!el) return;
+  el.innerHTML = pensionSets.map(s => renderPensionSetItem(s)).join('');
+}
+
+function renderPensionSetItem(s) {
+  const isAuto = s.mode === 'auto';
+  const isManual = s.mode === 'manual';
+  const stateClass = isAuto ? 'set-auto' : isManual ? 'set-manual' : 'set-inactive';
+
+  let rightContent = '';
+  if (isAuto && s.autoResult) {
+    const digitHtml = s.autoResult.nums.split('').map(d =>
+      `<div class="ticket-digit" style="width:22px;height:26px;font-size:.8rem;border-radius:4px">${d}</div>`
+    ).join('');
+    rightContent = `<div class="pension-set-result">
+      <div class="ticket-group" style="font-size:.78rem;padding:.18rem .42rem">${s.autoResult.group}조</div>
+      <span style="color:var(--text3);font-size:.72rem">-</span>
+      <div style="display:flex;gap:2px">${digitHtml}</div>
+    </div>`;
+  } else if (isAuto) {
+    rightContent = `<div class="pension-set-result">
+      <div class="pension-ph-group"></div>
+      <div style="display:flex;gap:2px">${Array(6).fill('<div class="ball-placeholder"></div>').join('')}</div>
+    </div>`;
+  } else if (isManual) {
+    rightContent = renderPensionManualInputs(s);
   } else {
-    for (let i = 0; i < pensionSetCount; i++) {
+    rightContent = `<span class="set-excluded">— 제외 —</span>`;
+  }
+
+  return `<div class="set-item ${stateClass}" id="pset-${s.id}">
+    <div class="set-row">
+      <span class="set-num">${s.id}세트</span>
+      <div class="set-toggle-group">
+        <button class="set-tgl ${isAuto ? 'on-auto' : ''}" onclick="togglePensionSetMode(${s.id},'auto')">자동</button>
+        <button class="set-tgl ${isManual ? 'on-manual' : ''}" onclick="togglePensionSetMode(${s.id},'manual')">수동</button>
+      </div>
+      ${rightContent}
+    </div>
+  </div>`;
+}
+
+function renderPensionManualInputs(s) {
+  const gv = s.manualGroup || '';
+  const nums = s.manualNums || Array(6).fill('');
+  const groupInput = `<input
+    class="manual-input pension-group-inp${gv ? ' filled' : ''}"
+    id="pmanual-${s.id}-g"
+    type="text" inputmode="numeric" maxlength="1"
+    value="${gv}" placeholder="조"
+    oninput="onPensionGroupInput(${s.id},this)"
+    onclick="this.select()" />`;
+  const digitInputs = nums.map((v, i) => `<input
+    class="manual-input${v ? ' filled' : ''}"
+    id="pmanual-${s.id}-${i}"
+    type="text" inputmode="numeric" maxlength="1"
+    value="${v}" placeholder="?"
+    oninput="onPensionDigitInput(${s.id},${i},this)"
+    onkeydown="onPensionKeydown(${s.id},${i},event)"
+    onclick="this.select()" />`).join('');
+  return `<div class="pension-manual-wrap">
+    ${groupInput}
+    <span style="color:var(--text3);font-size:.7rem;flex-shrink:0">조 -</span>
+    <div style="display:flex;gap:3px">${digitInputs}</div>
+  </div>`;
+}
+
+function togglePensionSetMode(id, mode) {
+  const s = pensionSets[id - 1];
+  if (s.mode === mode) {
+    s.mode = null;
+  } else {
+    s.mode = mode;
+    if (mode === 'manual') s.autoResult = null;
+    if (mode === 'auto') { s.manualGroup = ''; s.manualNums = Array(6).fill(''); }
+  }
+  updatePensionSetItem(id);
+}
+
+function updatePensionSetItem(id) {
+  const s = pensionSets[id - 1];
+  const el = document.getElementById(`pset-${id}`);
+  if (!el) return;
+  el.outerHTML = renderPensionSetItem(s);
+  if (s.mode === 'manual') {
+    setTimeout(() => document.getElementById(`pmanual-${id}-g`)?.focus(), 50);
+  }
+}
+
+// --- 수동 입력 핸들러 ---
+function onPensionGroupInput(setId, el) {
+  el.value = el.value.replace(/[^1-5]/g, '').slice(0, 1);
+  const s = pensionSets[setId - 1];
+  s.manualGroup = el.value;
+  el.classList.toggle('filled', el.value.length > 0);
+  if (el.value) document.getElementById(`pmanual-${setId}-0`)?.focus();
+}
+
+function onPensionDigitInput(setId, idx, el) {
+  el.value = el.value.replace(/[^0-9]/g, '').slice(0, 1);
+  const s = pensionSets[setId - 1];
+  if (!s.manualNums) s.manualNums = Array(6).fill('');
+  s.manualNums[idx] = el.value;
+  el.classList.toggle('filled', el.value.length > 0);
+  if (el.value) movePensionFocus(setId, idx, 1);
+}
+
+function onPensionKeydown(setId, idx, e) {
+  if (['Enter', 'Tab', 'ArrowRight'].includes(e.key)) { e.preventDefault(); movePensionFocus(setId, idx, 1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); movePensionFocus(setId, idx, -1); }
+  if (e.key === 'Backspace') {
+    const el = document.getElementById(`pmanual-${setId}-${idx}`);
+    if (el && el.value === '') {
+      if (idx === 0) document.getElementById(`pmanual-${setId}-g`)?.focus();
+      else movePensionFocus(setId, idx, -1);
+    }
+  }
+}
+
+function movePensionFocus(setId, idx, dir) {
+  const next = idx + dir;
+  if (next >= 0 && next < 6) document.getElementById(`pmanual-${setId}-${next}`)?.focus();
+}
+
+// --- 자동 번호 생성 ---
+function generatePensionSets() {
+  const autoSets = pensionSets.filter(s => s.mode === 'auto');
+  if (autoSets.length === 0) {
+    alert('자동 세트가 없습니다. 최소 1개 세트를 자동으로 설정해주세요.');
+    return;
+  }
+  const fixedDigits = getFixedDigits();
+
+  if (selectedGroup === 'all') {
+    // 각 세트에 1~5조 순서대로 배정
+    autoSets.forEach((s, idx) => {
       let nums = '';
       for (let j = 0; j < 6; j++) {
         nums += fixedDigits[j] !== null ? fixedDigits[j] : Math.floor(Math.random() * 10);
       }
-      generatedSets.push({ group: String(selectedGroup), nums, fixedDigits: [...fixedDigits] });
-    }
+      s.autoResult = { group: String((idx % 5) + 1), nums };
+    });
+  } else {
+    autoSets.forEach(s => {
+      let nums = '';
+      for (let j = 0; j < 6; j++) {
+        nums += fixedDigits[j] !== null ? fixedDigits[j] : Math.floor(Math.random() * 10);
+      }
+      s.autoResult = { group: String(selectedGroup), nums };
+    });
   }
-  document.getElementById('pensionResults').innerHTML = generatedSets.map((s, i) => {
-    const digitHtml = s.nums.split('').map((d, j) =>
-      `<div class="ticket-digit${s.fixedDigits[j] !== null ? ' fixed' : ''}">${d}</div>`
-    ).join('');
-    return `<div class="ticket" style="animation:fadeIn .3s ${i*.07}s both" onclick="copyNums('${s.group}조 ${s.nums}')">
-      <div class="ticket-header">
-        <span class="ticket-label">세트 ${i+1}</span>
-        <span style="font-size:.58rem;color:var(--text3)">탭하여 복사</span>
-      </div>
-      <div class="ticket-body">
-        <div class="ticket-group">${s.group}조</div>
-        <span style="color:var(--text3);font-size:.78rem">-</span>
-        <div class="ticket-digits">${digitHtml}</div>
-      </div>
-    </div>`;
-  }).join('');
-  saveHistoryLocal('pension', generatedSets.map(s => `${s.group}조 ${s.nums}`));
-  renderHistoryList('pension');
+
+  const el = document.getElementById('pensionSetList');
+  if (el) el.innerHTML = pensionSets.map(s => renderPensionSetItem(s)).join('');
 }
 
+// --- 구매 확정 ---
+function confirmPensionRound() {
+  const activeSets = pensionSets.filter(s => s.mode !== null);
+  if (activeSets.length === 0) {
+    alert('최소 1개 이상의 세트를 선택해주세요.');
+    return;
+  }
+  for (const s of activeSets) {
+    if (s.mode === 'auto') {
+      if (!s.autoResult) { alert('숫자가 입력되지 않은 세트가 있습니다.'); return; }
+    } else if (s.mode === 'manual') {
+      if (!s.manualGroup || !/^[1-5]$/.test(s.manualGroup)) {
+        alert('숫자가 입력되지 않은 세트가 있습니다.'); return;
+      }
+      const incomplete = !s.manualNums || s.manualNums.some(v => v === '' || v === undefined);
+      if (incomplete) { alert('숫자가 입력되지 않은 세트가 있습니다.'); return; }
+    }
+  }
+
+  const data = activeSets.map(s =>
+    s.mode === 'auto'
+      ? `${s.autoResult.group}조 ${s.autoResult.nums}`
+      : `${s.manualGroup}조 ${s.manualNums.join('')}`
+  );
+  saveHistoryLocal('pension', data);
+  renderHistoryList('pension');
+
+  // 라운드 초기화
+  pensionSets.forEach(s => { s.mode = 'auto'; s.autoResult = null; s.manualGroup = ''; s.manualNums = Array(6).fill(''); });
+  const el = document.getElementById('pensionSetList');
+  if (el) el.innerHTML = pensionSets.map(s => renderPensionSetItem(s)).join('');
+  const toast = document.getElementById('copyToast');
+  if (toast) { toast.textContent = '구매가 확정되었습니다 ✓'; toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.textContent = '번호가 복사되었습니다'; }, 1800); }
+}
+
+// --- 시뮬레이터 ---
 function adjustSimCount(delta) {
   simCount = Math.max(1, Math.min(100, simCount + delta));
   document.getElementById('simCount').textContent = simCount;
@@ -108,15 +276,13 @@ function adjustSimCount(delta) {
 }
 
 function renderPensionSim() {
-  const monthly = simCount;
-  const yearly = monthly * 12;
+  const yearly = simCount * 12;
   const cost = yearly * 1000;
   let totalExpected = 0;
   const rows = PENSION_PRIZES.map(p => {
     const expTimes = yearly * p.prob;
-    const expAmount = expTimes * p.amount;
-    totalExpected += expAmount;
-    return { ...p, expTimes, expAmount };
+    totalExpected += expTimes * p.amount;
+    return { ...p, expTimes };
   });
   const roi = ((totalExpected / cost) * 100).toFixed(1);
 
@@ -142,6 +308,7 @@ function renderPensionSim() {
   }).join('')}</div>`;
 }
 
+// --- 서브탭 전환 ---
 function switchPensionSub(sub) {
   document.querySelectorAll('[data-psub]').forEach(t => t.classList.toggle('active', t.dataset.psub === sub));
   ['pension-gen', 'pension-info', 'pension-history'].forEach(s => {
@@ -166,6 +333,7 @@ function renderPensionHistoryTab() {
   renderHistoryList('pension');
 }
 
+// --- 탭 렌더링 ---
 function initPension() {
   renderPensionGenTab();
   renderPensionInfoTab();
@@ -176,37 +344,56 @@ function renderPensionGenTab() {
   const el = document.getElementById('sub-pension-gen');
   if (!el) return;
   el.innerHTML = `
+    <!-- 최근 당첨번호 -->
     <div class="card">
       <div class="card-label">최근 당첨번호</div>
       <div id="pensionLastDraw"><div class="skeleton" style="height:70px"></div></div>
     </div>
+
+    <!-- 라운드 / 세트 -->
     <div class="card">
-      <div class="card-label">생성 옵션</div>
-      <div class="option-row">
-        <span class="option-label">생성 세트 수</span>
-        <div class="stepper">
-          <button onclick="adjustSets('pension',-1)">−</button>
-          <span id="pensionSetCount">5</span>
-          <button onclick="adjustSets('pension',1)">+</button>
-        </div>
+      <div class="card-label">라운드 1 · 5세트</div>
+      <div id="pensionSetList"></div>
+    </div>
+
+    <!-- 생성 옵션 (아코디언) -->
+    <div class="card" style="padding:0">
+      <div class="accordion-header" onclick="togglePensionOptions()">
+        <div class="accordion-title">⚙️ 생성 옵션</div>
+        <span class="accordion-chevron" id="pensionOptionsChevron">▲</span>
       </div>
-      <div class="option-row" style="flex-wrap:wrap;gap:.4rem">
-        <span class="option-label" style="width:100%">조 번호 선택</span>
-        <div class="group-selector" id="groupSelector">
-          <div class="group-chip active" data-group="all" onclick="selectGroup('all')">모든 조</div>
-          ${[1,2,3,4,5].map(g=>`<div class="group-chip" data-group="${g}" onclick="selectGroup(${g})">${g}조</div>`).join('')}
+      <div class="accordion-body" id="pensionOptionsBody">
+        <div class="option-row" style="flex-wrap:wrap;gap:.4rem">
+          <span class="option-label" style="width:100%">조 번호 선택</span>
+          <div class="group-selector" id="groupSelector">
+            <div class="group-chip active" data-group="all" onclick="selectGroup('all')">모든 조</div>
+            ${[1,2,3,4,5].map(g=>`<div class="group-chip" data-group="${g}" onclick="selectGroup(${g})">${g}조</div>`).join('')}
+          </div>
         </div>
+        <div class="option-row" style="margin-top:.5rem">
+          <span class="option-label">자릿수 고정 <span style="color:var(--text3);font-size:.68rem">(빈칸=랜덤)</span></span>
+        </div>
+        <div class="digit-fix" style="margin-top:.3rem">
+          ${[1,2,3,4,5,6].map(i=>`<input class="digit-slot" id="pDigit${i}" maxlength="1" inputmode="numeric" placeholder="?" oninput="onDigitInput(this,'${i<6?'pDigit'+(i+1):'null'}')">`).join('')}
+        </div>
+        <div style="font-size:.65rem;color:var(--text3);text-align:center;margin-top:.3rem">원하는 자리에 0~9 입력 시 고정</div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-label">자릿수 고정 (빈칸 = 랜덤)</div>
-      <div class="digit-fix">
-        ${[1,2,3,4,5,6].map(i=>`<input class="digit-slot" id="pDigit${i}" maxlength="1" inputmode="numeric" placeholder="?" oninput="onDigitInput(this,'${i<6?'pDigit'+(i+1):'null'}')">`).join('')}
-      </div>
-      <div style="font-size:.65rem;color:var(--text3);text-align:center;margin-top:.3rem">원하는 자리에 0~9 입력 시 고정</div>
+
+    <!-- 버튼 -->
+    <div class="btn-row">
+      <button class="btn-primary" style="background:linear-gradient(135deg,var(--pension),#c2410c)" onclick="generatePensionSets()">✨ 자동 생성</button>
+      <button class="btn-primary btn-confirm" onclick="confirmPensionRound()">🛒 구매 확정</button>
     </div>
-    <button class="btn-primary" style="background:linear-gradient(135deg,var(--pension),#c2410c)" onclick="generatePension()">연금복권 번호 생성</button>
-    <div id="pensionResults"></div>`;
+  `;
+  initPensionSetList();
+}
+
+let pensionOptionsOpen = true;
+function togglePensionOptions() {
+  pensionOptionsOpen = !pensionOptionsOpen;
+  document.getElementById('pensionOptionsBody')?.classList.toggle('hidden', !pensionOptionsOpen);
+  document.getElementById('pensionOptionsChevron').textContent = pensionOptionsOpen ? '▲' : '▼';
 }
 
 function renderPensionInfoTab() {
@@ -243,12 +430,4 @@ function renderPensionInfoTab() {
       <div id="pensionExpChart"></div>
     </div>`;
   renderPensionSim();
-}
-
-function adjustSets(type, delta) {
-  if (type === 'pension') {
-    pensionSetCount = Math.max(1, Math.min(10, pensionSetCount + delta));
-    const el = document.getElementById('pensionSetCount');
-    if (el) el.textContent = pensionSetCount;
-  }
 }
