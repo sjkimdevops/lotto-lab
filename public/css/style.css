@@ -651,6 +651,20 @@ body::before {
   box-shadow: 0 4px 20px rgba(5,150,105,.3) !important;
 }
 .btn-confirm:hover { box-shadow: 0 6px 28px rgba(5,150,105,.45) !important; }
+.btn-qr {
+  width: 100%;
+  padding: .75rem;
+  border-radius: .75rem;
+  border: 1.5px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  margin-bottom: .9rem;
+}
+.btn-qr:active { background: rgba(167,139,250,.15); }
 
 /* ==================== 연금복권 세트 ==================== */
 

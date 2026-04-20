@@ -412,6 +412,48 @@ function confirmLottoRound() {
   if (toast) { toast.textContent = '구매가 확정되었습니다 ✓'; toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.textContent = '번호가 복사되었습니다'; }, 1800); }
 }
 
+// --- QR 당첨 확인 ---
+function openQRScanner() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) input.setAttribute('capture', 'environment');
+  input.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) decodeQRFromFile(file);
+  });
+  input.click();
+}
+
+function decodeQRFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (code) {
+        const url = code.data;
+        if (url.startsWith('http')) {
+          window.open(url, '_blank', 'noopener');
+        } else {
+          alert('QR 코드: ' + url);
+        }
+      } else {
+        alert('QR 코드를 인식하지 못했습니다.\n선명한 사진을 사용해주세요.');
+      }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 // --- 로또 탭 렌더링 ---
 function renderLottoGenTab() {
   const el = document.getElementById('sub-lotto-gen');
@@ -478,6 +520,7 @@ function renderLottoGenTab() {
       <button class="btn-primary" id="genBtn" onclick="generateLottoSets()" disabled>✨ 자동 생성</button>
       <button class="btn-primary btn-confirm" id="confirmBtn" onclick="confirmLottoRound()" disabled>🛒 구매 확정</button>
     </div>
+    <button class="btn-qr" onclick="openQRScanner()">📷 QR 당첨 확인</button>
   `;
   initNumGrid();
   initSetList();
