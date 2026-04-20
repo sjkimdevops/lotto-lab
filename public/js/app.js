@@ -76,7 +76,7 @@ function renderLoginPage() {
   el.innerHTML = `
     <div class="login-screen">
       <div style="font-size:3rem;margin-bottom:.6rem">🎰</div>
-      <h1 style="font-size:1.7rem;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.4rem">대박이네</h1>
+      <h1 style="font-size:1.7rem;font-weight:800;background:linear-gradient(90deg,var(--accent),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.4rem">복권월드</h1>
       <p style="font-size:.8rem;color:var(--text3);line-height:1.7;margin-bottom:1.8rem;text-align:center">
         로그인하면 번호 히스토리가<br>모든 기기에서 동기화됩니다
       </p>
