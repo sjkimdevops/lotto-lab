@@ -414,19 +414,59 @@ function confirmLottoRound() {
 
 // --- QR 당첨 확인 ---
 function openQRScanner() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.style.cssText = 'position:fixed;top:-200px;left:-200px;opacity:0';
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile) input.setAttribute('capture', 'environment');
-  input.addEventListener('change', e => {
-    const file = e.target.files[0];
-    document.body.removeChild(input);
-    if (file) decodeQRFromFile(file);
-  });
-  document.body.appendChild(input);
-  input.click();
+  if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+    Capacitor.Plugins.Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: 'dataUrl',
+      source: 'CAMERA',
+      saveToGallery: false,
+    }).then(photo => {
+      decodeQRFromDataUrl(photo.dataUrl);
+    }).catch(err => {
+      if (err && !String(err.message || err).includes('cancel')) {
+        alert('카메라 실행에 실패했습니다.');
+      }
+    });
+  } else {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.style.cssText = 'position:fixed;top:-200px;left:-200px;opacity:0';
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) input.setAttribute('capture', 'environment');
+    input.addEventListener('change', e => {
+      const file = e.target.files[0];
+      document.body.removeChild(input);
+      if (file) decodeQRFromFile(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+}
+
+function decodeQRFromDataUrl(dataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (code) {
+      const url = code.data;
+      if (url.startsWith('http')) {
+        window.open(url, '_blank', 'noopener');
+      } else {
+        alert('QR 코드: ' + url);
+      }
+    } else {
+      alert('QR 코드를 인식하지 못했습니다.\n선명한 사진을 사용해주세요.');
+    }
+  };
+  img.src = dataUrl;
 }
 
 function decodeQRFromFile(file) {
