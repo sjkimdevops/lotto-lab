@@ -417,12 +417,15 @@ function openQRScanner() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
+  input.style.cssText = 'position:fixed;top:-200px;left:-200px;opacity:0';
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   if (isMobile) input.setAttribute('capture', 'environment');
   input.addEventListener('change', e => {
     const file = e.target.files[0];
+    document.body.removeChild(input);
     if (file) decodeQRFromFile(file);
   });
+  document.body.appendChild(input);
   input.click();
 }
 
