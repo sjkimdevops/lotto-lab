@@ -424,8 +424,9 @@ function openQRScanner() {
     }).then(photo => {
       decodeQRFromDataUrl(photo.dataUrl);
     }).catch(err => {
-      if (err && !String(err.message || err).includes('cancel')) {
-        alert('카메라 실행에 실패했습니다.');
+      const msg = String(err && (err.message || err) || '');
+      if (!msg.toLowerCase().includes('cancel')) {
+        alert('카메라 오류: ' + (msg || 'unknown'));
       }
     });
   } else {
