@@ -15,6 +15,7 @@ const sets = Array.from({length: 5}, (_, i) => ({
   mode: 'auto',
   autoNums: null,
   manualNums: null,
+  locked: false,
 }));
 
 // --- 데이터 로드 ---
@@ -309,13 +310,18 @@ function renderSetItem(s) {
     rightContent = `<span class="set-excluded">— 제외 —</span>`;
   }
 
-  return `<div class="set-item ${stateClass}" id="set-${s.id}">
+  const lockBtn = isAuto && s.autoNums
+    ? `<button class="set-lock${s.locked ? ' locked' : ''}" onclick="toggleSetLock(${s.id})">${s.locked ? '🔒' : '🔓'}</button>`
+    : '';
+
+  return `<div class="set-item ${stateClass}${isAuto && s.locked ? ' set-locked' : ''}" id="set-${s.id}">
     <div class="set-row">
       <span class="set-num">${s.id}세트</span>
       <div class="set-toggle-group">
         <button class="set-tgl ${isAuto ? 'on-auto' : ''}" onclick="toggleSetMode(${s.id},'auto')">자동</button>
         <button class="set-tgl ${isManual ? 'on-manual' : ''}" onclick="toggleSetMode(${s.id},'manual')">수동</button>
       </div>
+      ${lockBtn}
       ${rightContent}
     </div>
   </div>`;
@@ -325,11 +331,18 @@ function toggleSetMode(id, mode) {
   const s = sets[id - 1];
   if (s.mode === mode) {
     s.mode = null;
+    s.locked = false;
   } else {
     s.mode = mode;
-    if (mode === 'manual') s.autoNums = null;
-    if (mode === 'auto') s.manualNums = null;
+    if (mode === 'manual') { s.autoNums = null; s.locked = false; }
+    if (mode === 'auto') { s.manualNums = null; s.locked = false; }
   }
+  updateSetItem(id);
+}
+
+function toggleSetLock(id) {
+  const s = sets[id - 1];
+  s.locked = !s.locked;
   updateSetItem(id);
 }
 
@@ -410,7 +423,12 @@ function generateLottoSets() {
     alert('자동 세트가 없습니다. 최소 1개 세트를 자동으로 설정해주세요.');
     return;
   }
-  autoSets.forEach(s => { s.autoNums = generateNums(); });
+  const targets = autoSets.filter(s => !s.locked);
+  if (targets.length === 0) {
+    alert('모든 자동 세트가 고정되어 있습니다. 잠금을 해제해주세요.');
+    return;
+  }
+  targets.forEach(s => { s.autoNums = generateNums(); });
   const el = document.getElementById('setList');
   if (el) el.innerHTML = sets.map(s => renderSetItem(s)).join('');
 }
@@ -441,7 +459,7 @@ function confirmLottoRound() {
   saveHistoryLocal('lotto', data);
   renderHistoryList('lotto');
   // 라운드 초기화
-  sets.forEach(s => { s.mode = 'auto'; s.autoNums = null; s.manualNums = null; });
+  sets.forEach(s => { s.mode = 'auto'; s.autoNums = null; s.manualNums = null; s.locked = false; });
   const el = document.getElementById('setList');
   if (el) el.innerHTML = sets.map(s => renderSetItem(s)).join('');
   const toast = document.getElementById('copyToast');

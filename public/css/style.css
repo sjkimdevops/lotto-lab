@@ -369,6 +369,10 @@ body::before {
 .set-item.set-auto { border-color: rgba(167,139,250,0.35); background: rgba(167,139,250,0.05); }
 .set-item.set-manual { border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.04); }
 .set-item.set-inactive { opacity: 0.4; }
+.set-item.set-locked { border-color: rgba(251,191,36,0.5); background: rgba(251,191,36,0.07); }
+.set-lock { background: none; border: none; font-size: .95rem; cursor: pointer; padding: 0 .15rem; opacity: .45; transition: opacity .15s, transform .1s; line-height: 1; flex-shrink: 0; }
+.set-lock.locked { opacity: 1; }
+.set-lock:active { transform: scale(1.25); }
 
 .set-row { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
 .set-num { font-size: .82rem; font-weight: 700; color: var(--text3); min-width: 34px; flex-shrink: 0; }
