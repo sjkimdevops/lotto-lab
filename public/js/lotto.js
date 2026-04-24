@@ -5,6 +5,7 @@
 let fullData = [], allData = [], freqMap = {}, latestRound = 0;
 let includeNums = new Set(), excludeNums = new Set();
 let optionsOpen = true;
+let gapProbs = {};
 
 const LEVEL_LABELS = ['OFF', '약간', '보통', '강하게', '매우강', '최대'];
 
@@ -173,13 +174,48 @@ function updateLevelLabel(type) {
   updateOptionBadges();
 }
 
+// --- Gap 기반 조건부 확률 ---
+function computeGapProbabilities() {
+  gapProbs = {};
+  if (!fullData.length) return;
+  for (let n = 1; n <= 45; n++) {
+    // 메인 6개 번호만 (보너스 제외)
+    const rounds = fullData
+      .filter(d => [1,2,3,4,5,6].some(i => d[`drwtNo${i}`] === n))
+      .map(d => d.drwNo)
+      .sort((a, b) => a - b);
+    if (rounds.length < 2) { gapProbs[n] = null; continue; }
+    // 연속 출현 간격 수집
+    const gaps = [];
+    for (let i = 1; i < rounds.length; i++) gaps.push(rounds[i] - rounds[i - 1]);
+    // 현재 gap = 최신 회차 - 마지막 출현 회차
+    const currentGap = latestRound - rounds[rounds.length - 1];
+    const target = currentGap + 1;
+    const atLeast = gaps.filter(g => g >= target).length;
+    const exactly  = gaps.filter(g => g === target).length;
+    gapProbs[n] = atLeast === 0 ? 1 : exactly / atLeast;
+  }
+}
+
+function updateProbOverlay() {
+  for (let n = 1; n <= 45; n++) {
+    const el = document.getElementById(`prob-${n}`);
+    if (!el) continue;
+    const p = gapProbs[n];
+    el.textContent = (p === null || p === undefined) ? '' : Math.round(p * 100) + '%';
+  }
+}
+
 // --- 번호 고정/제외 ---
 function initNumGrid() {
   const grid = document.getElementById('numGrid');
   if (!grid) return;
   let html = '';
   for (let i = 1; i <= 45; i++) {
-    html += `<div class="num-cell" data-num="${i}" onclick="toggleNum(${i})" ondblclick="toggleExclude(${i})">${i}</div>`;
+    html += `<div class="num-cell" data-num="${i}" onclick="toggleNum(${i})" ondblclick="toggleExclude(${i})">
+      <span class="num-val">${i}</span>
+      <span class="num-prob" id="prob-${i}">-</span>
+    </div>`;
   }
   grid.innerHTML = html;
 }
@@ -624,6 +660,8 @@ async function initLotto() {
   renderLottoGenTab();
   renderLottoStatsTab();
   await loadData();
+  computeGapProbabilities();
+  updateProbOverlay();
   document.getElementById('genBtn')?.removeAttribute('disabled');
   document.getElementById('confirmBtn')?.removeAttribute('disabled');
 }
