@@ -51,5 +51,7 @@
 	<string>로또 용지의 QR 코드를 스캔하여 당첨 여부를 확인합니다</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>로또 용지 사진에서 QR 코드를 읽어 당첨 여부를 확인합니다</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>로또 용지 사진에서 QR 코드를 읽어 당첨 여부를 확인합니다</string>
 </dict>
 </plist>
