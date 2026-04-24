@@ -34,7 +34,7 @@ async function loadData() {
 
 function applyRange() {
   const count = parseInt(document.getElementById('analysisRange')?.value || '50');
-  allData = fullData.slice(0, count);
+  allData = count > 0 ? fullData.slice(0, count) : fullData.slice();
   buildFreqMap();
   renderLastDraw();
   renderStats();
@@ -266,7 +266,7 @@ function updateOptionBadges() {
   const incCount = includeNums.size;
   const excCount = excludeNums.size;
   const parts = [
-    `${range}회 분석`,
+    range === '0' ? '전체 분석' : `${range}회 분석`,
     hotVal > 0 ? `핫 ${LEVEL_LABELS[hotVal]}` : null,
     coldVal > 0 ? `콜드 ${LEVEL_LABELS[coldVal]}` : null,
     incCount > 0 ? `고정 ${[...includeNums].sort((a,b)=>a-b).join('·')}` : null,
@@ -560,10 +560,11 @@ function renderLottoGenTab() {
           <span class="option-label">분석 회차 수</span>
           <div class="range-control">
             <select id="analysisRange" onchange="changeAnalysisRange()">
-              <option value="10">최근 10회</option>
-              <option value="20">최근 20회</option>
               <option value="50" selected>최근 50회</option>
               <option value="100">최근 100회</option>
+              <option value="300">최근 300회</option>
+              <option value="500">최근 500회</option>
+              <option value="0">전체</option>
             </select>
           </div>
         </div>
