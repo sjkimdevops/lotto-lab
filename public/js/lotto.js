@@ -310,18 +310,19 @@ function renderSetItem(s) {
     rightContent = `<span class="set-excluded">— 제외 —</span>`;
   }
 
-  const lockBtn = isAuto && s.autoNums
-    ? `<button class="set-lock${s.locked ? ' locked' : ''}" onclick="toggleSetLock(${s.id})">${s.locked ? '🔒' : '🔓'}</button>`
+  const lockIcon = isAuto && s.autoNums
+    ? `<span class="set-lock${s.locked ? ' locked' : ''}">${s.locked ? '🔒' : '🔓'}</span>`
     : '';
+  const isLockable = isAuto && !!s.autoNums;
 
-  return `<div class="set-item ${stateClass}${isAuto && s.locked ? ' set-locked' : ''}" id="set-${s.id}">
+  return `<div class="set-item ${stateClass}${isAuto && s.locked ? ' set-locked' : ''}${isLockable ? ' set-lockable' : ''}" id="set-${s.id}"${isLockable ? ` onclick="toggleSetLock(${s.id})"` : ''}>
     <div class="set-row">
       <span class="set-num">${s.id}세트</span>
-      <div class="set-toggle-group">
+      <div class="set-toggle-group" onclick="event.stopPropagation()">
         <button class="set-tgl ${isAuto ? 'on-auto' : ''}" onclick="toggleSetMode(${s.id},'auto')">자동</button>
         <button class="set-tgl ${isManual ? 'on-manual' : ''}" onclick="toggleSetMode(${s.id},'manual')">수동</button>
       </div>
-      ${lockBtn}
+      ${lockIcon}
       ${rightContent}
     </div>
   </div>`;
