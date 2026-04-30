@@ -5,9 +5,9 @@ const path = require('path');
 
 const DATA_PATH = path.join(__dirname, 'public', 'data', 'pension.json');
 
-// 연금복권 720+: 2011-09-01 첫 추첨, 매주 목요일
+// 연금복권 720+: 2020-05-07 첫 추첨, 매주 목요일
 function getCurrentPensionRound() {
-  const start = new Date('2011-09-01T20:00:00+09:00');
+  const start = new Date('2020-05-07T20:00:00+09:00');
   return Math.max(1, Math.floor((Date.now() - start) / (7 * 24 * 60 * 60 * 1000)) + 1);
 }
 
