@@ -134,29 +134,41 @@ function renderStats() {
 }
 
 // --- 번호 생성 알고리즘 ---
+function weightedRandom(eligible) {
+  const total = eligible.reduce((s, [, w]) => s + w, 0);
+  let r = Math.random() * total;
+  for (const [n, w] of eligible) {
+    r -= w;
+    if (r <= 0) return n;
+  }
+  return eligible[eligible.length - 1][0];
+}
+
 function generateNums() {
   const hotLevel = parseInt(document.getElementById('optHotLevel')?.value || '3');
   const coldLevel = parseInt(document.getElementById('optColdLevel')?.value || '1');
   const allowConsec = document.getElementById('optConsec')?.checked || false;
   const sorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
-  const hotNums = sorted.slice(0, 15).map(e => Number(e[0])).filter(n => !excludeNums.has(n));
-  const coldNums = sorted.slice(-15).map(e => Number(e[0])).filter(n => !excludeNums.has(n));
-  const hotWeight = hotLevel * 0.1;
-  const coldWeight = coldLevel * 0.1;
-  const total = hotWeight + coldWeight;
-  const hotProb = total > 0 ? hotWeight / (total + 1) : 0;
-  const coldProb = total > 0 ? coldWeight / (total + 1) : 0;
+  const hotNums = new Set(sorted.slice(0, 15).map(e => Number(e[0])));
+  const coldNums = new Set(sorted.slice(-15).map(e => Number(e[0])));
+  const hotBonus = hotLevel * 0.1;
+  const coldBonus = coldLevel * 0.1;
 
   let nums = new Set(includeNums);
   let attempts = 0;
   while (nums.size < 6 && attempts < 500) {
     attempts++;
-    let n;
-    const r = Math.random();
-    if (r < hotProb && hotNums.length) n = hotNums[Math.floor(Math.random() * hotNums.length)];
-    else if (r < hotProb + coldProb && coldNums.length) n = coldNums[Math.floor(Math.random() * coldNums.length)];
-    else n = Math.floor(Math.random() * 45) + 1;
-    if (excludeNums.has(n)) continue;
+    const eligible = [];
+    for (let n = 1; n <= 45; n++) {
+      if (nums.has(n) || excludeNums.has(n)) continue;
+      let w = (gapProbs[n] ?? 0.5);
+      if (w <= 0) w = 0.01;
+      if (hotNums.has(n)) w *= (1 + hotBonus);
+      if (coldNums.has(n)) w *= (1 + coldBonus);
+      eligible.push([n, w]);
+    }
+    if (eligible.length === 0) break;
+    const n = weightedRandom(eligible);
     if (!allowConsec && nums.size > 0) {
       if ([...nums].some(x => Math.abs(x - n) === 1)) continue;
     }

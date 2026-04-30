@@ -211,13 +211,14 @@ function generatePensionSets() {
   const fixedDigits = getFixedDigits();
 
   if (selectedGroup === 'all') {
-    // 각 세트에 1~5조 순서대로 배정
-    autoSets.forEach((s, idx) => {
+    // 모든 세트에 동일한 1개 조 번호 배정
+    const randomGroup = String(Math.floor(Math.random() * 5) + 1);
+    autoSets.forEach(s => {
       let nums = '';
       for (let j = 0; j < 6; j++) {
         nums += fixedDigits[j] !== null ? fixedDigits[j] : Math.floor(Math.random() * 10);
       }
-      s.autoResult = { group: String((idx % 5) + 1), nums };
+      s.autoResult = { group: randomGroup, nums };
     });
   } else {
     autoSets.forEach(s => {
