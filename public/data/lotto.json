@@ -1,5 +1,17 @@
 [
   {
+    "drwNo": 1242,
+    "drwNoDate": "2026-09-19",
+    "drwtNo1": 2,
+    "drwtNo2": 4,
+    "drwtNo3": 10,
+    "drwtNo4": 16,
+    "drwtNo5": 31,
+    "drwtNo6": 41,
+    "bnusNo": 9,
+    "returnValue": "success"
+  },
+  {
     "drwNo": 1241,
     "drwNoDate": "2026-09-12",
     "drwtNo1": 7,
