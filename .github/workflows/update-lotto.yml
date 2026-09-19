@@ -22,19 +22,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - name: 의존성 설치
-        run: npm install
-
-      - name: Playwright 브라우저 설치
-        run: npx playwright install chromium --with-deps
 
       - name: 로또 6/45 데이터 업데이트
-        run: node fetch-lotto-playwright.js
+        run: node fetch-lotto.js
 
       - name: 연금복권 720+ 데이터 업데이트
-        run: node fetch-pension-playwright.js
+        run: node fetch-pension.js
 
       - name: 변경사항 커밋 & 푸시
         run: |
